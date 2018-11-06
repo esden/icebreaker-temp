@@ -1,6 +1,8 @@
 /*
  * hub75_top_tb.v
  *
+ * CERN Open Hardware Licence v1.2 - See LICENSE
+ *
  * Copyright (C) 2018  Sylvain Munaut
  *
  * vim: ts=4 sw=4

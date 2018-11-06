@@ -1,6 +1,8 @@
 /*
  * hub75_bcm.v
  *
+ * CERN Open Hardware Licence v1.2 - See LICENSE
+ *
  * Copyright (C) 2018  Sylvain Munaut <tnt@246tNt.com>
  *
  * vim: ts=4 sw=4
