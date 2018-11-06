@@ -1,0 +1,18 @@
+# RGB panel pmod
+set_io -nowarn hub75_addr[4] 28	# B10
+set_io -nowarn hub75_addr[3] 31	# B4
+set_io -nowarn hub75_addr[2] 34	# B3
+set_io -nowarn hub75_addr[1] 38	# B2
+set_io -nowarn hub75_addr[0] 43	# B1
+set_io -nowarn hub75_data[5] 46	# A9
+set_io -nowarn hub75_data[4] 48	# A8
+set_io -nowarn hub75_data[3] 3	# A7
+set_io -nowarn hub75_data[2] 47	# A3
+set_io -nowarn hub75_data[1] 2	# A2
+set_io -nowarn hub75_data[0] 4	# A1
+set_io -nowarn hub75_clk 32	# B9
+set_io -nowarn hub75_le	36	# B8
+set_io -nowarn hub75_blank 42	# B7
+
+# Clock
+set_io clk_12m 35
