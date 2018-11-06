@@ -204,10 +204,10 @@ module hub75_bcm #(
 
 	// Latch
 	SB_IO #(
-			.PIN_TYPE(6'b010100),
-			.PULLUP(1'b0),
-			.NEG_TRIGGER(1'b0),
-			.IO_STANDARD("SB_LVCMOS")
+		.PIN_TYPE(6'b010100),
+		.PULLUP(1'b0),
+		.NEG_TRIGGER(1'b0),
+		.IO_STANDARD("SB_LVCMOS")
 	) iob_le_I (
 		.PACKAGE_PIN(hub75_le),
 		.CLOCK_ENABLE(1'b1),
