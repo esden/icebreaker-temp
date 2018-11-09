@@ -30,6 +30,18 @@ module hub75_top #(
 	output wire hub75_blank,
 
 	// Frame Buffer write interface
+	input  wire [LOG_N_BANKS-1:0] fbw_bank_addr,
+	input  wire [LOG_N_ROWS-1:0]  fbw_row_addr,
+	input  wire fbw_row_store,
+	output wire fbw_row_rdy,
+	input  wire fbw_row_swap,
+
+	input  wire [(N_CHANS * N_PLANES)-1:0] fbw_data,
+	input  wire [LOG_N_COLS-1:0] fbw_col_addr,
+	input  wire fbw_wren,
+
+	input  wire frame_swap,
+	output wire frame_rdy,
 
 	// Config
 	input  wire [7:0] cfg_pre_latch_len,
@@ -44,6 +56,10 @@ module hub75_top #(
 
 	// Signals
 	// -------
+
+	// Frame swap logic
+	reg  frame_swap_pending;
+	wire frame_swap_fb;
 
 	// Frame Buffer access
 		// Read - Back Buffer loading
@@ -77,71 +93,48 @@ module hub75_top #(
 	wire blank_rdy;
 
 
-	// Debug temp
+	// Sub-blocks
 	// ----------
 
-	// Go if we're ready
-	assign scan_go = scan_rdy;
-
-	// Latch ROW
-	reg [LOG_N_ROWS-1:0] dbg_row_back;
-	reg [LOG_N_ROWS-1:0] dbg_row_front;
-	reg dbg_row_rdy;
-
+	// Synchronized frame swap logic
 	always @(posedge clk)
-	begin
-		if (rst) begin
-			dbg_row_back  <= 0;
-			dbg_row_front <= 0;
-			dbg_row_rdy   <= 1'b0;
-		end else begin
-			if (fbr_row_load)
-				dbg_row_back <= fbr_row_addr;
+		if (rst)
+			frame_swap_pending <= 1'b0;
+		else
+			frame_swap_pending <= (frame_swap_pending & ~scan_rdy) | frame_swap;
 
-			if (fbr_row_swap)
-				dbg_row_front <= dbg_row_back;
-
-			dbg_row_rdy <= (dbg_row_rdy & ~fbr_row_swap) | fbr_row_load;
-		end
-	end
-
-	assign fbr_row_rdy = dbg_row_rdy;
-
-	// Pattern generation
-	wire [5:0] dbg_pg_col  = fbr_col_addr;
-	wire [5:0] dbg_pg_row0 = {1'b0, dbg_row_front};
-	wire [5:0] dbg_pg_row1 = {1'b1, dbg_row_front};
-
-	reg [7:0] dbg_pg_r0;
-	reg [7:0] dbg_pg_g0;
-	reg [7:0] dbg_pg_b0;
-	reg [7:0] dbg_pg_r1;
-	reg [7:0] dbg_pg_g1;
-	reg [7:0] dbg_pg_b1;
-
-	always @(posedge clk)
-	begin
-		if (fbr_rden)
-		begin
-			dbg_pg_r0 <= { dbg_pg_col[5:0],  dbg_pg_col[5:4]  };
-			dbg_pg_g0 <= (dbg_pg_col[2:0] == 3'b000) ? 8'hff : 8'h00;
-			dbg_pg_b0 <= { dbg_pg_row0[5:0], dbg_pg_row0[5:4] };
-			dbg_pg_r1 <= { dbg_pg_col[5:0],  dbg_pg_col[5:4]  };
-			dbg_pg_g1 <= (dbg_pg_row1[2:0] == 3'b000) ? 8'hff : 8'h00;
-			dbg_pg_b1 <= { dbg_pg_row1[5:0], dbg_pg_row1[5:4] };
-		end
-	end
-
-	assign fbr_data = { dbg_pg_b1, dbg_pg_g1, dbg_pg_r1, dbg_pg_b0, dbg_pg_g0, dbg_pg_r0 };
-
-
-	//
-	// -----
+	assign frame_rdy = ~frame_swap_pending;
+	assign scan_go = scan_rdy & ~frame_swap_pending;
+	assign frame_swap_fb = frame_swap_pending & scan_rdy;
 
 
 	// Frame Buffer
-
-
+	hub75_framebuffer #(
+		.N_BANKS(N_BANKS),
+		.N_ROWS(N_ROWS),
+		.N_COLS(N_COLS),
+		.N_CHANS(N_CHANS),
+		.N_PLANES(N_PLANES)
+	) fb_I (
+		.wr_bank_addr(fbw_bank_addr),
+		.wr_row_addr(fbw_row_addr),
+		.wr_row_store(fbw_row_store),
+		.wr_row_rdy(fbw_row_rdy),
+		.wr_row_swap(fbw_row_swap),
+		.wr_data(fbw_data),
+		.wr_col_addr(fbw_col_addr),
+		.wr_en(fbw_wren),
+		.rd_row_addr(fbr_row_addr),
+		.rd_row_load(fbr_row_load),
+		.rd_row_rdy(fbr_row_rdy),
+		.rd_row_swap(fbr_row_swap),
+		.rd_data(fbr_data),
+		.rd_col_addr(fbr_col_addr),
+		.rd_en(fbr_rden),
+		.frame_swap(frame_swap_fb),
+		.clk(clk),
+		.rst(rst)
+	);
 
 	// Scan
 	hub75_scan #(

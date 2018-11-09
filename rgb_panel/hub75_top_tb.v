@@ -14,11 +14,15 @@
 module hub75_top_tb;
 
 	// Params
-	parameter integer N_BANKS  = 2;
-	parameter integer N_ROWS   = 32;
-	parameter integer N_COLS   = 64;
-	parameter integer N_CHANS  = 3;
-	parameter integer N_PLANES = 8;
+	localparam integer N_BANKS  = 2;
+	localparam integer N_ROWS   = 32;
+	localparam integer N_COLS   = 64;
+	localparam integer N_CHANS  = 3;
+	localparam integer N_PLANES = 8;
+
+	localparam integer LOG_N_BANKS = $clog2(N_BANKS);
+	localparam integer LOG_N_ROWS  = $clog2(N_ROWS);
+	localparam integer LOG_N_COLS  = $clog2(N_COLS);
 
 	// Signals
 	reg rst = 1'b1;
@@ -30,6 +34,19 @@ module hub75_top_tb;
 	wire hub75_le;
 	wire hub75_blank;
 
+	wire [LOG_N_BANKS-1:0] fbw_bank_addr;
+	wire [LOG_N_ROWS-1:0]  fbw_row_addr;
+	wire fbw_row_store;
+	wire fbw_row_rdy;
+	wire fbw_row_swap;
+
+	wire [(N_CHANS * N_PLANES)-1:0] fbw_data;
+	wire [LOG_N_COLS-1:0] fbw_col_addr;
+	wire fbw_wren;
+
+	wire frame_swap;
+	wire frame_rdy;
+
 	// Setup recording
 	initial begin
 		$dumpfile("hub75_top_tb.vcd");
@@ -39,7 +56,7 @@ module hub75_top_tb;
 	// Reset pulse
 	initial begin
 		# 200 rst = 0;
-		# 1000000 $finish;
+		# 10000000 $finish;
 	end
 
 	// Clocks
@@ -58,10 +75,34 @@ module hub75_top_tb;
 		.hub75_clk(hub75_clk),
 		.hub75_le(hub75_le),
 		.hub75_blank(hub75_blank),
-		.cfg_pre_latch_len(8'h00),
-		.cfg_latch_len(8'h00),
-		.cfg_post_latch_len(8'h00),
+		.fbw_bank_addr(fbw_bank_addr),
+		.fbw_row_addr(fbw_row_addr),
+		.fbw_row_store(fbw_row_store),
+		.fbw_row_rdy(fbw_row_rdy),
+		.fbw_row_swap(fbw_row_swap),
+		.fbw_data(fbw_data),
+		.fbw_col_addr(fbw_col_addr),
+		.fbw_wren(fbw_wren),
+		.frame_swap(frame_swap),
+		.frame_rdy(frame_rdy),
+		.cfg_pre_latch_len(8'h80),
+		.cfg_latch_len(8'h80),
+		.cfg_post_latch_len(8'h80),
 		.cfg_bcm_bit_len(8'h06),
+		.clk(clk),
+		.rst(rst)
+	);
+
+	pgen pgen_I (
+		.fbw_row_addr({fbw_bank_addr, fbw_row_addr}),
+		.fbw_row_store(fbw_row_store),
+		.fbw_row_rdy(fbw_row_rdy),
+		.fbw_row_swap(fbw_row_swap),
+		.fbw_data(fbw_data),
+		.fbw_col_addr(fbw_col_addr),
+		.fbw_wren(fbw_wren),
+		.frame_swap(frame_swap),
+		.frame_rdy(frame_rdy),
 		.clk(clk),
 		.rst(rst)
 	);

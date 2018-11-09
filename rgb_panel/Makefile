@@ -19,10 +19,13 @@ ICE40_LIBS=$(shell yosys-config --datdir/ice40/cells_sim.v)
 OBJS=\
 	hub75_bcm.v \
 	hub75_blanking.v \
+	hub75_framebuffer.v \
 	hub75_scan.v \
 	hub75_shift.v \
 	hub75_top.v \
-	sysmgr.v
+	pgen.v \
+	sysmgr.v \
+	sim_spram.v
 
 TESTBENCHES=\
 	hub75_top_tb
