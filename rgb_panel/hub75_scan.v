@@ -100,7 +100,7 @@ module hub75_scan #(
 			row <= row + 1;
 			row_last <= (row == {{(LOG_N_ROWS-1){1'b1}}, 1'b0});
 		end
-	
+
 
 	// External interfaces
 	// -------------------
