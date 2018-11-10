@@ -264,7 +264,7 @@ module hub75_framebuffer #(
 		if (wi_boot)
 			wip_cnt <= 0;
 		else if (wi_active)
-			wip_cnt  <= wip_cnt + 1;
+			wip_cnt <= wip_cnt + 1;
 
 	always @(posedge clk)
 		if (rst)
