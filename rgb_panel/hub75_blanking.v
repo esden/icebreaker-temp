@@ -80,7 +80,7 @@ module hub75_blanking #(
 		.PACKAGE_PIN(hub75_blank),
 		.CLOCK_ENABLE(1'b1),
 		.OUTPUT_CLK(clk),
-		.D_OUT_0(active)
+		.D_OUT_0(~active)
 	);
 
 endmodule // hub75_blanking
