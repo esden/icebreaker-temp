@@ -202,11 +202,13 @@ module hub75_framebuffer #(
 			fb_pingpong <= fb_pingpong ^ frame_swap;
 
 	// Shared access
+		// We default to 'WRITE' because it will actually access the RAM one
+		// cycle after the state has gone to IDLE due to pipeline delay
 	assign fb_di = wifb_data;
 	assign rofb_data = fb_do;
-	assign fb_addr = ((fsm_state == ST_WRITEIN_BOOT) || (fsm_state == ST_WRITEIN_RUN)) ? { ~fb_pingpong, wifb_addr } : { fb_pingpong, rofb_addr };
+	assign fb_addr = wifb_wren ? { ~fb_pingpong, wifb_addr } : { fb_pingpong, rofb_addr };
 	assign fb_mask = wifb_mask;
-	assign fb_wren = ((fsm_state == ST_WRITEIN_BOOT) || (fsm_state == ST_WRITEIN_RUN)) ? wifb_wren : 1'b0;
+	assign fb_wren = wifb_wren;
 
 	// Interface to the Write-in / Read-out control
 	assign wi_boot   = (fsm_state == ST_WRITEIN_BOOT);
@@ -277,13 +279,13 @@ module hub75_framebuffer #(
 	assign wilb_rden = wi_active;
 
 	// Route data from frame buffer to line buffer
-	assign wifb_data = wip_cnt[0] ? {8'h00, wilb_data[23:16] } : wilb_data[15:0];
+	assign wifb_data = wifb_addr[0] ? {8'h00, wilb_data[23:16] } : wilb_data[15:0];
 	assign wifb_mask = 4'hf;
 
 		// Those are one cycle late because we need to wait for the FB data
 	always @(posedge clk)
 	begin
-		wifb_addr <= { wip_row_addr, wip_cnt, wip_bank_addr };
+		wifb_addr <= { wip_row_addr, wip_cnt[LOG_N_COLS:1], wip_bank_addr, wip_cnt[0] };
 		wifb_wren <= wi_active;
 	end
 
