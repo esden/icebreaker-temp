@@ -43,7 +43,7 @@ module pgen (
 	reg  [2:0] fsm_state_next;
 
 	// Counters
-	reg [7:0] frame;
+	reg [11:0] frame;
 	reg [5:0] cnt_row;
 	reg [5:0] cnt_col;
 	reg cnt_row_last;
@@ -121,10 +121,18 @@ module pgen (
 	// Front-Buffer write
 	// ------------------
 
+	wire [3:0] c0 = frame[7:4];
+	wire [3:0] c1 = frame[7:4] + 1;
+
+	wire [3:0] a0 = 4'hf - frame[3:0];
+	wire [3:0] a1 = frame[3:0];
+
 	assign fbw_wren = fsm_state == ST_GEN_ROW;
 	assign fbw_col_addr = cnt_col;
 	assign fbw_data[23:16] = (cnt_col[5:2] * cnt_col[5:2]) + cnt_col[3:0];
-	assign fbw_data[15: 8] = ((cnt_col[2:0] == frame[7:5]) || (cnt_row[2:0] == frame[7:5])) ? 8'hff : 8'h00;
+	assign fbw_data[15: 8] =
+		(((cnt_col[3:0] == c0) || (cnt_row[3:0] == c0)) ? {a0, a0} : 8'h00) +
+		(((cnt_col[3:0] == c1) || (cnt_row[3:0] == c1)) ? {a1, a1} : 8'h00);
 	assign fbw_data[ 7: 0] = (cnt_row[5:2] * cnt_row[5:2]) + cnt_row[3:0];
 
 
