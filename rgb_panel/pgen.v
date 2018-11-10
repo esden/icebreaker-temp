@@ -123,9 +123,9 @@ module pgen (
 
 	assign fbw_wren = fsm_state == ST_GEN_ROW;
 	assign fbw_col_addr = cnt_col;
-	assign fbw_data[23:16] = (cnt_col[5:2] * cnt_col[5:2]) + ({ cnt_col[5:4], 1'b0 } * cnt_col[1:0]);
+	assign fbw_data[23:16] = (cnt_col[5:2] * cnt_col[5:2]) + cnt_col[3:0];
 	assign fbw_data[15: 8] = ((cnt_col[2:0] == frame[7:5]) || (cnt_row[2:0] == frame[7:5])) ? 8'hff : 8'h00;
-	assign fbw_data[ 7: 0] = (cnt_row[5:2] * cnt_row[5:2]) + ({ cnt_row[5:4], 1'b0 } * cnt_row[1:0]);
+	assign fbw_data[ 7: 0] = (cnt_row[5:2] * cnt_row[5:2]) + cnt_row[3:0];
 
 
 	// Back-Buffer store
