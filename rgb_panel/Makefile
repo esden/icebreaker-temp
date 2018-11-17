@@ -53,11 +53,11 @@ endif
 	$(ICETIME) -d $(DEVICE) -mtr $@ $<
 
 prog: $(PROJ).bin
-	$(ICEPROG) -S $<
+	$(ICEPROG) $<
 
 sudo-prog: $(PROJ).bin
 	@echo 'Executing prog as root!!!'
-	sudo $(ICEPROG) -S $<
+	sudo $(ICEPROG) $<
 
 clean:
 	rm -f $(PROJ).blif $(PROJ).json $(PROJ).asc $(PROJ).rpt $(PROJ).bin $(TESTBENCHES) *.vcd
