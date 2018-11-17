@@ -24,11 +24,14 @@ OBJS=\
 	hub75_shift.v \
 	hub75_top.v \
 	pgen.v \
+	vgen.v \
+	spi_flash_reader.v \
 	sysmgr.v \
 	sim_spram.v
 
 TESTBENCHES=\
-	hub75_top_tb
+	hub75_top_tb \
+	spi_flash_reader_tb
 
 all: $(PROJ).bin $(TESTBENCHES)
 
@@ -47,7 +50,7 @@ else
 endif
 
 %.bin: %.asc
-	$(ICEPACK) $< $@
+	$(ICEPACK) -s $< $@
 
 %.rpt: %.asc
 	$(ICETIME) -d $(DEVICE) -mtr $@ $<
@@ -58,6 +61,11 @@ prog: $(PROJ).bin
 sudo-prog: $(PROJ).bin
 	@echo 'Executing prog as root!!!'
 	sudo $(ICEPROG) $<
+
+data-prog: $(PROJ).bin nyan_glitch_64x64x16.raw.xz
+	cp $(PROJ).bin $(PROJ)-data.bin
+	xzcat nyan_glitch_64x64x16.raw.xz | dd of=$(PROJ)-data.bin seek=256 bs=1024
+	$(ICEPROG) $(PROJ)-data.bin
 
 clean:
 	rm -f $(PROJ).blif $(PROJ).json $(PROJ).asc $(PROJ).rpt $(PROJ).bin $(TESTBENCHES) *.vcd

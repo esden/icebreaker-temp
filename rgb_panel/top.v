@@ -18,6 +18,12 @@ module top (
 	output wire hub75_le,
 	output wire hub75_blank,
 
+	// SPI interface
+	output wire spi_mosi,
+	input  wire spi_miso,
+	output wire spi_cs_n,
+	output wire spi_clk,
+
 	// Clock
 	input  wire clk_12m
 );
@@ -60,6 +66,17 @@ module top (
 	wire frame_swap;
 	wire frame_rdy;
 
+	// SPI Reader
+`ifndef PATTERN
+	wire [23:0] sr_addr;
+	wire [15:0] sr_len;
+	wire sr_go;
+	wire sr_rdy;
+
+	wire [7:0] sr_data;
+	wire sr_valid;
+`endif
+
 
 	// Hub75
 	// -----
@@ -94,6 +111,7 @@ module top (
 		.rst(rst)
 	);
 
+`ifdef PATTERN
 	pgen pgen_I (
 		.fbw_row_addr({fbw_bank_addr, fbw_row_addr}),
 		.fbw_row_store(fbw_row_store),
@@ -107,6 +125,42 @@ module top (
 		.clk(clk),
 		.rst(rst)
 	);
+`else
+	vgen vgen_I (
+		.sr_addr(sr_addr),
+		.sr_len(sr_len),
+		.sr_go(sr_go),
+		.sr_rdy(sr_rdy),
+		.sr_data(sr_data),
+		.sr_valid(sr_valid),
+		.fbw_row_addr({fbw_bank_addr, fbw_row_addr}),
+		.fbw_row_store(fbw_row_store),
+		.fbw_row_rdy(fbw_row_rdy),
+		.fbw_row_swap(fbw_row_swap),
+		.fbw_data(fbw_data),
+		.fbw_col_addr(fbw_col_addr),
+		.fbw_wren(fbw_wren),
+		.frame_swap(frame_swap),
+		.frame_rdy(frame_rdy),
+		.clk(clk),
+		.rst(rst)
+	);
+
+	spi_flash_reader spi_reader_I (
+		.spi_mosi(spi_mosi),
+		.spi_miso(spi_miso),
+		.spi_cs_n(spi_cs_n),
+		.spi_clk(spi_clk),
+		.addr(sr_addr),
+		.len(sr_len),
+		.go(sr_go),
+		.rdy(sr_rdy),
+		.data(sr_data),
+		.valid(sr_valid),
+		.clk(clk),
+		.rst(rst)
+	);
+`endif
 
 
 	// Clock / Reset
