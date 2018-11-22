@@ -14,8 +14,7 @@ module hub75_fb_writein #(
 	parameter integer N_BANKS  = 2,
 	parameter integer N_ROWS   = 32,
 	parameter integer N_COLS   = 64,
-	parameter integer N_CHANS  = 3,
-	parameter integer N_PLANES = 8,
+	parameter integer BITDEPTH = 24,
 
 	// Auto-set
 	parameter integer LOG_N_BANKS = $clog2(N_BANKS),
@@ -30,7 +29,7 @@ module hub75_fb_writein #(
 	input  wire wr_row_swap,
 
 	// Write interface - Access
-	input  wire [(N_CHANS * N_PLANES)-1:0] wr_data,
+	input  wire [BITDEPTH-1:0] wr_data,
 	input  wire [LOG_N_COLS-1:0] wr_col_addr,
 	input  wire wr_en,
 
@@ -67,7 +66,7 @@ module hub75_fb_writein #(
 
 	// Line buffer access
 	wire [LOG_N_COLS-1:0] wilb_col_addr;
-	wire [(N_CHANS * N_PLANES)-1:0] wilb_data;
+	wire [BITDEPTH-1:0] wilb_data;
 	wire wilb_rden;
 
 	// Frame buffer access
@@ -129,7 +128,7 @@ module hub75_fb_writein #(
 
 	hub75_linebuffer #(
 		.N_WORDS(1),
-		.WORD_WIDTH(N_CHANS * N_PLANES),
+		.WORD_WIDTH(BITDEPTH),
 		.ADDR_WIDTH(1 + LOG_N_COLS)
 	) writein_buf_I (
 		.wr_addr({~wip_buf, wr_col_addr}),

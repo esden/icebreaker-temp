@@ -16,6 +16,7 @@ module hub75_top #(
 	parameter integer N_COLS   = 64,	// # of columns
 	parameter integer N_CHANS  = 3,		// # of data channel
 	parameter integer N_PLANES = 8,		// # bitplanes
+	parameter integer BITDEPTH = 24,	// # bits per color
 
 	// Auto-set
 	parameter integer LOG_N_BANKS = $clog2(N_BANKS),
@@ -38,7 +39,7 @@ module hub75_top #(
 	input  wire fbw_row_swap,
 
 		// Line buffer access
-	input  wire [(N_CHANS * N_PLANES)-1:0] fbw_data,
+	input  wire [BITDEPTH-1:0] fbw_data,
 	input  wire [LOG_N_COLS-1:0] fbw_col_addr,
 	input  wire fbw_wren,
 
@@ -117,7 +118,8 @@ module hub75_top #(
 		.N_ROWS(N_ROWS),
 		.N_COLS(N_COLS),
 		.N_CHANS(N_CHANS),
-		.N_PLANES(N_PLANES)
+		.N_PLANES(N_PLANES),
+		.BITDEPTH(BITDEPTH)
 	) fb_I (
 		.wr_bank_addr(fbw_bank_addr),
 		.wr_row_addr(fbw_row_addr),

@@ -16,6 +16,7 @@ module hub75_fb_readout #(
 	parameter integer N_COLS   = 64,
 	parameter integer N_CHANS  = 3,
 	parameter integer N_PLANES = 8,
+	parameter integer BITDEPTH = 24,
 
 	// Auto-set
 	parameter integer LOG_N_BANKS = $clog2(N_BANKS),

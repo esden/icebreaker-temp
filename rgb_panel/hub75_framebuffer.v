@@ -16,6 +16,7 @@ module hub75_framebuffer #(
 	parameter integer N_COLS   = 64,
 	parameter integer N_CHANS  = 3,
 	parameter integer N_PLANES = 8,
+	parameter integer BITDEPTH = 24,
 
 	// Auto-set
 	parameter integer LOG_N_BANKS = $clog2(N_BANKS),
@@ -30,7 +31,7 @@ module hub75_framebuffer #(
 	input  wire wr_row_swap,
 
 	// Write interface - Access
-	input  wire [(N_CHANS * N_PLANES)-1:0] wr_data,
+	input  wire [BITDEPTH-1:0] wr_data,
 	input  wire [LOG_N_COLS-1:0] wr_col_addr,
 	input  wire wr_en,
 
@@ -149,8 +150,7 @@ module hub75_framebuffer #(
 		.N_BANKS(N_BANKS),
 		.N_ROWS(N_ROWS),
 		.N_COLS(N_COLS),
-		.N_CHANS(N_CHANS),
-		.N_PLANES(N_PLANES)
+		.BITDEPTH(BITDEPTH)
 	) writein_I (
 		.wr_bank_addr(wr_bank_addr),
 		.wr_row_addr(wr_row_addr),
@@ -179,7 +179,8 @@ module hub75_framebuffer #(
 		.N_ROWS(N_ROWS),
 		.N_COLS(N_COLS),
 		.N_CHANS(N_CHANS),
-		.N_PLANES(N_PLANES)
+		.N_PLANES(N_PLANES),
+		.BITDEPTH(BITDEPTH)
 	) readout_I (
 		.rd_row_addr(rd_row_addr),
 		.rd_row_load(rd_row_load),

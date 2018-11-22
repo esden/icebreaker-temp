@@ -19,6 +19,7 @@ module hub75_top_tb;
 	localparam integer N_COLS   = 64;
 	localparam integer N_CHANS  = 3;
 	localparam integer N_PLANES = 8;
+	localparam integer BITDEPTH = 24;
 
 	localparam integer LOG_N_BANKS = $clog2(N_BANKS);
 	localparam integer LOG_N_ROWS  = $clog2(N_ROWS);
@@ -40,7 +41,7 @@ module hub75_top_tb;
 	wire fbw_row_rdy;
 	wire fbw_row_swap;
 
-	wire [(N_CHANS * N_PLANES)-1:0] fbw_data;
+	wire [BITDEPTH-1:0] fbw_data;
 	wire [LOG_N_COLS-1:0] fbw_col_addr;
 	wire fbw_wren;
 
@@ -84,7 +85,8 @@ module hub75_top_tb;
 		.N_ROWS(N_ROWS),
 		.N_COLS(N_COLS),
 		.N_CHANS(N_CHANS),
-		.N_PLANES(N_PLANES)
+		.N_PLANES(N_PLANES),
+		.BITDEPTH(BITDEPTH)
 	) dut_I (
 		.hub75_addr(hub75_addr),
 		.hub75_data(hub75_data),
