@@ -34,10 +34,9 @@ module hub75_fb_readout #(
 	input  wire rd_en,
 
 	// Read Out - Control
-	output wire ctrl_pending,
-	input  wire ctrl_boot,
-	input  wire ctrl_active,
-	output wire ctrl_done,
+	output wire ctrl_req,
+	input  wire ctrl_gnt,
+	output reg  ctrl_rel,
 
 	// Read Out - Frame Buffer Access
 	output wire [12:0] fb_addr,
@@ -51,66 +50,58 @@ module hub75_fb_readout #(
 	// Signals
 	// -------
 
-	// Read-out control
-	reg  ro_pingpong;
-	reg  ro_pending;
-	wire ro_done;
+	// Read-out processl
+	reg  rop_buf;
 
-	// Line-Buffer access
-	wire [(N_BANKS * N_CHANS * N_PLANES)-1:0] rolb_wr_data;
-	wire [N_BANKS-1:0] rolb_wr_mask;
-	wire [LOG_N_COLS-1:0] rolb_wr_addr;
-	wire rolb_wr_ena;
+	reg  rop_pending;
+	reg  rop_running;
+	reg  rop_ready;
 
-	// Read-out process
 	reg [LOG_N_ROWS-1:0] rop_row_addr;
+
 	reg [7:0] rop_cnt;
 	reg rop_last;
 
-	reg rop_active_r;
-	reg [7:0] rop_cnt_r;
-	reg [15:0] rop_data_r;
+	// Frame buffer access
+	reg  [15:0] fb_data_r;
+
+	// Line buffer access
+	wire [(N_BANKS * N_CHANS * N_PLANES)-1:0] rolb_wr_data;
+	reg  [N_BANKS-1:0] rolb_wr_mask;
+	reg  [LOG_N_COLS-1:0] rolb_wr_addr;
+	reg  rolb_wr_ena;
 
 
-	// Read-out
-	// --------
-
-	// Line buffer
-	hub75_linebuffer #(
-		.N_WORDS(N_BANKS),
-		.WORD_WIDTH(N_CHANS * N_PLANES),
-		.ADDR_WIDTH(1 + LOG_N_COLS)
-	) readout_buf_I (
-		.wr_addr({~ro_pingpong, rolb_wr_addr}),
-		.wr_data(rolb_wr_data),
-		.wr_mask(rolb_wr_mask),
-		.wr_ena(rolb_wr_ena),
-		.rd_addr({ro_pingpong, rd_col_addr}),
-		.rd_data(rd_data),
-		.rd_ena(rd_en),
-		.clk(clk)
-	);
+	// Control
+	// -------
 
 	// Buffer swap
 	always @(posedge clk or posedge rst)
 		if (rst)
-			ro_pingpong <= 1'b0;
+			rop_buf <= 1'b0;
 		else
-			ro_pingpong <= ro_pingpong ^ rd_row_swap;
+			rop_buf <= rop_buf ^ rd_row_swap;
 
-	// Requests
+	// Track status and requests
 	always @(posedge clk or posedge rst)
-		if (rst)
-			ro_pending <= 1'b0;
-		else
-			ro_pending <= (ro_pending & ~ro_done) | rd_row_load;
+		if (rst) begin
+			rop_pending <= 1'b0;
+			rop_running <= 1'b0;
+			rop_ready   <= 1'b0;
+		end else begin
+			rop_pending <= (rop_pending & ~ctrl_gnt) |  rd_row_load;
+			rop_running <= (rop_running & ~rop_last) |  ctrl_gnt;
+			rop_ready   <= (rop_ready   |  rop_last) & ~rd_row_load;
+		end
 
-	assign rd_row_rdy = ~ro_pending;
+	// Arbiter interface
+	assign ctrl_req = rop_pending;
 
-	assign ro_done = rop_last;
+	always @(posedge clk)
+		ctrl_rel <= rop_last;
 
-	assign ctrl_pending = ro_pending;
-	assign ctrl_done = ro_done;
+	// Read interface
+	assign rd_row_rdy = rop_ready;
 
 	// Latch row address
 	always @(posedge clk)
@@ -119,34 +110,53 @@ module hub75_fb_readout #(
 
 	// Counter
 	always @(posedge clk)
-		if (ctrl_boot)
-			rop_cnt <= 0;
-		else if (ctrl_active)
-			rop_cnt  <= rop_cnt + 1;
-
-	always @(posedge clk or posedge rst)
-		if (rst)
+		if (~rop_running) begin
+			rop_cnt  <= 0;
 			rop_last <= 1'b0;
-		else if (ctrl_active)
+		end else begin
+			rop_cnt  <= rop_cnt + 1;
 			rop_last <= (rop_cnt == { 7'h7f, 1'b0 });
+		end
 
-	// Delay some data to sync with the frame-buffer read data
-	always @(posedge clk)
-	begin
-		rop_active_r <= ctrl_active;
-		rop_cnt_r <= rop_cnt;
-	end
+
+	// Line buffer
+	// -----------
+
+	hub75_linebuffer #(
+		.N_WORDS(N_BANKS),
+		.WORD_WIDTH(N_CHANS * N_PLANES),
+		.ADDR_WIDTH(1 + LOG_N_COLS)
+	) readout_buf_I (
+		.wr_addr({~rop_buf, rolb_wr_addr}),
+		.wr_data(rolb_wr_data),
+		.wr_mask(rolb_wr_mask),
+		.wr_ena(rolb_wr_ena),
+		.rd_addr({rop_buf, rd_col_addr}),
+		.rd_data(rd_data),
+		.rd_ena(rd_en),
+		.clk(clk)
+	);
+
+
+	// Frame buffer -> Line buffer
+	// ---------------------------
+
+	// Frame buffer read
+	assign fb_addr = { rop_row_addr, rop_cnt };
 
 	// Delay the data from frame buffer so we get 32 bits at once
 	always @(posedge clk)
-		rop_data_r <= fb_data;
+		fb_data_r <= fb_data;
 
 	// Route data from frame buffer to line buffer
-	assign fb_addr = { rop_row_addr, rop_cnt };
+	assign rolb_wr_data = { fb_data[7:0], fb_data_r, fb_data[7:0], fb_data_r };
 
-	assign rolb_wr_data = { fb_data[7:0], rop_data_r, fb_data[7:0], rop_data_r };
-	assign rolb_wr_mask = { rop_cnt_r[1], ~rop_cnt_r[1] };
-	assign rolb_wr_addr = rop_cnt_r[7:2];
-	assign rolb_wr_ena  = rop_active_r & rop_cnt_r[0];
+	// Sync LB command with read data from frame buffer (1 cycle delay)
+	always @(posedge clk)
+	begin
+		rolb_wr_mask <= { rop_cnt[1], ~rop_cnt[1] };
+		rolb_wr_addr <= rop_cnt[7:2];
+		rolb_wr_ena  <= rop_running & rop_cnt[0];
+	end
 
 endmodule // hub75_fb_readout

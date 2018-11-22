@@ -56,17 +56,19 @@ module hub75_framebuffer #(
 	// Signals
 	// -------
 
-	// FSM
-	localparam
-		ST_IDLE_WRITE	= 0,
-		ST_IDLE_READ	= 1,
-		ST_WRITEIN_BOOT	= 2,
-		ST_WRITEIN_RUN	= 3,
-		ST_READOUT_BOOT	= 4,
-		ST_READOUT_RUN	= 5;
+	// Arbitration logic
+	reg  arb_busy;
+	reg  arb_prio;
 
-	reg  [2:0] fsm_state;
-	reg  [2:0] fsm_state_next;
+	// Write-in control
+	wire wi_req;
+	reg  wi_gnt;
+	wire wi_rel;
+
+	// Read-out control
+	wire ro_req;
+	reg  ro_gnt;
+	wire ro_rel;
 
 	// Frame buffer access
 	wire [15:0] fb_di;
@@ -77,22 +79,10 @@ module hub75_framebuffer #(
 
 	reg  fb_pingpong;
 
-	// Write-in control
-	wire wi_pending;
-	wire wi_boot;
-	wire wi_active;
-	wire wi_done;
-
 	// Write-in frame buffer access
 	wire [12:0] wifb_addr;
 	wire [15:0] wifb_data;
 	wire wifb_wren;
-
-	// Read-out control
-	wire ro_pending;
-	wire ro_boot;
-	wire ro_active;
-	wire ro_done;
 
 	// Read-out frame-buffer access
 	wire [12:0] rofb_addr;
@@ -102,49 +92,20 @@ module hub75_framebuffer #(
 	// Frame buffer
 	// ------------
 
-	// FSM
-		// State register
+	// Arbitration logic
 	always @(posedge clk or posedge rst)
-		if (rst)
-			fsm_state <= ST_IDLE_WRITE;
-		else
-			fsm_state <= fsm_state_next;
-
-		// Next-State logic
-	always @(*)
 	begin
-		// Default is not to move
-		fsm_state_next = fsm_state;
-
-		// Transitions ?
-		case (fsm_state)
-			ST_IDLE_WRITE:
-				if (wi_pending)
-					fsm_state_next = ST_WRITEIN_BOOT;
-				else if (ro_pending)
-					fsm_state_next = ST_READOUT_BOOT;
-
-			ST_IDLE_READ:
-				if (ro_pending)
-					fsm_state_next = ST_READOUT_BOOT;
-				else if (wi_pending)
-					fsm_state_next = ST_WRITEIN_BOOT;
-
-			ST_WRITEIN_BOOT:
-				fsm_state_next = ST_WRITEIN_RUN;
-
-			ST_WRITEIN_RUN:
-				if (wi_done)
-					fsm_state_next = ST_IDLE_READ;
-
-			ST_READOUT_BOOT:
-				fsm_state_next = ST_READOUT_RUN;
-
-			ST_READOUT_RUN:
-				if (ro_done)
-					fsm_state_next = ST_IDLE_WRITE;
-
-		endcase
+		if (rst) begin
+			arb_prio <= 1'b0;
+			arb_busy <= 1'b0;
+			wi_gnt   <= 1'b0;
+			ro_gnt   <= 1'b0;
+		end else begin
+			arb_busy <= (arb_busy | wi_req | ro_req) & ~(wi_rel | ro_rel);
+			arb_prio <= (wi_gnt | ro_gnt) ? ro_gnt  : arb_prio;
+			wi_gnt   <= ~arb_busy & wi_req & (~ro_req |  arb_prio);
+			ro_gnt   <= ~arb_busy & ro_req & (~wi_req | ~arb_prio);
+		end
 	end
 
 	// Storage
@@ -173,19 +134,12 @@ module hub75_framebuffer #(
 			fb_pingpong <= fb_pingpong ^ frame_swap;
 
 	// Shared access
-		// We default to 'WRITE' because it will actually access the RAM one
-		// cycle after the state has gone to IDLE due to pipeline delay
+		// We assume users as well behaved and just use wren for mux control
 	assign fb_di = wifb_data;
 	assign rofb_data = fb_do;
 	assign fb_addr = wifb_wren ? { ~fb_pingpong, wifb_addr } : { fb_pingpong, rofb_addr };
 	assign fb_mask = 4'hf;
 	assign fb_wren = wifb_wren;
-
-	// Interface to the Write-in / Read-out control
-	assign wi_boot   = (fsm_state == ST_WRITEIN_BOOT);
-	assign wi_active = (fsm_state == ST_WRITEIN_RUN);
-	assign ro_boot   = (fsm_state == ST_READOUT_BOOT);
-	assign ro_active = (fsm_state == ST_READOUT_RUN);
 
 
 	// Write-in
@@ -206,10 +160,9 @@ module hub75_framebuffer #(
 		.wr_data(wr_data),
 		.wr_col_addr(wr_col_addr),
 		.wr_en(wr_en),
-		.ctrl_pending(wi_pending),
-		.ctrl_boot(wi_boot),
-		.ctrl_active(wi_active),
-		.ctrl_done(wi_done),
+		.ctrl_req(wi_req),
+		.ctrl_gnt(wi_gnt),
+		.ctrl_rel(wi_rel),
 		.fb_addr(wifb_addr),
 		.fb_data(wifb_data),
 		.fb_wren(wifb_wren),
@@ -235,10 +188,9 @@ module hub75_framebuffer #(
 		.rd_data(rd_data),
 		.rd_col_addr(rd_col_addr),
 		.rd_en(rd_en),
-		.ctrl_pending(ro_pending),
-		.ctrl_boot(ro_boot),
-		.ctrl_active(ro_active),
-		.ctrl_done(ro_done),
+		.ctrl_req(ro_req),
+		.ctrl_gnt(ro_gnt),
+		.ctrl_rel(ro_rel),
 		.fb_addr(rofb_addr),
 		.fb_data(rofb_data),
 		.clk(clk),
