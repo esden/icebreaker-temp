@@ -30,16 +30,19 @@ module hub75_top #(
 	output wire hub75_blank,
 
 	// Frame Buffer write interface
+		// Row store/swap
 	input  wire [LOG_N_BANKS-1:0] fbw_bank_addr,
 	input  wire [LOG_N_ROWS-1:0]  fbw_row_addr,
 	input  wire fbw_row_store,
 	output wire fbw_row_rdy,
 	input  wire fbw_row_swap,
 
+		// Line buffer access
 	input  wire [(N_CHANS * N_PLANES)-1:0] fbw_data,
 	input  wire [LOG_N_COLS-1:0] fbw_col_addr,
 	input  wire fbw_wren,
 
+		// Frame buffer swap
 	input  wire frame_swap,
 	output wire frame_rdy,
 
