@@ -104,7 +104,7 @@ module hub75_framebuffer #(
 
 	// FSM
 		// State register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fsm_state <= ST_IDLE_WRITE;
 		else
@@ -166,7 +166,7 @@ module hub75_framebuffer #(
 	);
 
 	// Double-Buffer
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fb_pingpong <= 1'b0;
 		else

@@ -58,7 +58,7 @@ module hub75_scan #(
 	// ---
 
 	// State register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fsm_state <= ST_IDLE;
 		else

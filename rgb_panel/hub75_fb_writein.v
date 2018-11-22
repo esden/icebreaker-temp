@@ -94,14 +94,14 @@ module hub75_fb_writein #(
 	);
 
 	// Buffer swap
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			wi_pingpong <= 1'b0;
 		else
 			wi_pingpong <= wi_pingpong ^ wr_row_swap;
 
 	// Requests
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			wi_pending <= 1'b0;
 		else
@@ -128,7 +128,7 @@ module hub75_fb_writein #(
 		else if (ctrl_active)
 			wip_cnt <= wip_cnt + 1;
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			wip_last <= 1'b0;
 		else if (ctrl_active)

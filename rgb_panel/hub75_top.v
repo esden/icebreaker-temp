@@ -100,7 +100,7 @@ module hub75_top #(
 	// ----------
 
 	// Synchronized frame swap logic
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			frame_swap_pending <= 1'b0;
 		else

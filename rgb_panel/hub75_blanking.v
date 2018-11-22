@@ -46,7 +46,7 @@ module hub75_blanking #(
 	assign active = plane_cnt[N_PLANES];
 
 	// Plane length counter
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			plane_cnt <= 0;
 		else if (plane_cnt_ce)

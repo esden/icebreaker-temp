@@ -70,7 +70,7 @@ module vgen (
 	// ---
 
 	// State register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fsm_state <= ST_FRAME_WAIT;
 		else
@@ -110,7 +110,7 @@ module vgen (
 	// --------
 
 	// Frame counter
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst) begin
 			cnt_frame <= 0;
 			cnt_frame_last <= 1'b0;

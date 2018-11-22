@@ -92,14 +92,14 @@ module hub75_fb_readout #(
 	);
 
 	// Buffer swap
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			ro_pingpong <= 1'b0;
 		else
 			ro_pingpong <= ro_pingpong ^ rd_row_swap;
 
 	// Requests
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			ro_pending <= 1'b0;
 		else
@@ -124,7 +124,7 @@ module hub75_fb_readout #(
 		else if (ctrl_active)
 			rop_cnt  <= rop_cnt + 1;
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			rop_last <= 1'b0;
 		else if (ctrl_active)

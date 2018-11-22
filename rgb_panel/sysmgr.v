@@ -63,7 +63,7 @@ module sysmgr (
 	assign pll_reset_n = ~rst_in;
 
 	// Logic reset generation
-	always @(posedge clk_i)
+	always @(posedge clk_i or negedge pll_lock)
 		if (!pll_lock)
 			rst_cnt <= 4'h8;
 		else if (rst_cnt[3])

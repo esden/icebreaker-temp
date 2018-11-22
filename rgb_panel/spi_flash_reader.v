@@ -73,7 +73,7 @@ module spi_flash_reader (
 	// ---
 
 	// State register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fsm_state <= ST_IDLE;
 		else
@@ -109,7 +109,7 @@ module spi_flash_reader (
 	// Shift Register
 	// --------------
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			shift_reg <= 32'hAB000000;
 		else begin
@@ -153,7 +153,7 @@ module spi_flash_reader (
 	// -------
 
 	// Ready
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			rdy_i <= 1'b0;
 		else

@@ -54,7 +54,7 @@ module pgen (
 	// ---
 
 	// State register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fsm_state <= ST_WAIT_FRAME;
 		else
@@ -91,7 +91,7 @@ module pgen (
 	// --------
 
 	// Frame counter
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			frame <= 0;
 		else if ((fsm_state == ST_WAIT_ROW) && fbw_row_rdy)

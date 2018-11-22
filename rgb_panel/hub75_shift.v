@@ -59,7 +59,7 @@ module hub75_shift #(
 	// -------------
 
 	// Active / Valid flag
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst) begin
 			active_0 <= 1'b0;
 			active_1 <= 1'b0;
