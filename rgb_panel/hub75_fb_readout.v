@@ -60,7 +60,7 @@ module hub75_fb_readout #(
 	// Signals
 	// -------
 
-	// Read-out processl
+	// Read-out process
 	reg  rop_buf;
 
 	reg  rop_pending;
@@ -72,14 +72,38 @@ module hub75_fb_readout #(
 	reg [CW-1:0] rop_cnt;
 	reg rop_last;
 
+	wire rop_move;
+	wire rop_done;
+
 	// Frame buffer access
-	wire [BITDEPTH-1:0] fb_data_ext;
+	wire fb_rden;
+
+	reg  fb_rden_r;
+	reg  [FB_DW-1:0] fb_data_save;
+	wire [FB_DW-1:0] fb_data_mux;
+	reg  [(FB_DC*FB_DW)-1:0] fb_data_ext;
+
+	// Color Mapper
+	reg  [CW-CS1-1:0] cm_in_user_addr_pre;
+	reg  cm_in_user_last_pre;
+	reg  cm_in_valid_pre;
+
+	wire [BITDEPTH-1:0] cm_in_data;
+	reg  [CW-CS1-1:0] cm_in_user_addr;
+	reg  cm_in_user_last;
+	reg  cm_in_valid;
+	wire cm_in_ready;
+
+	wire [(N_CHANS*N_PLANES)-1:0] cm_out_data;
+	wire [CW-CS1-1:0] cm_out_user_addr;
+	wire cm_out_user_last;
+	wire cm_out_valid;
 
 	// Line buffer access
 	wire [(N_BANKS * N_CHANS * N_PLANES)-1:0] rolb_wr_data;
-	reg  [N_BANKS-1:0] rolb_wr_mask;
-	reg  [LOG_N_COLS-1:0] rolb_wr_addr;
-	reg  rolb_wr_ena;
+	wire [N_BANKS-1:0] rolb_wr_mask;
+	wire [LOG_N_COLS-1:0] rolb_wr_addr;
+	wire rolb_wr_ena;
 
 
 	// Control
@@ -100,15 +124,15 @@ module hub75_fb_readout #(
 			rop_ready   <= 1'b0;
 		end else begin
 			rop_pending <= (rop_pending & ~ctrl_gnt) |  rd_row_load;
-			rop_running <= (rop_running & ~rop_last) |  ctrl_gnt;
-			rop_ready   <= (rop_ready   |  rop_last) & ~rd_row_load;
+			rop_running <= (rop_running & ~rop_done) |  ctrl_gnt;
+			rop_ready   <= (rop_ready   |  rop_done) & ~rd_row_load;
 		end
 
 	// Arbiter interface
 	assign ctrl_req = rop_pending;
 
 	always @(posedge clk)
-		ctrl_rel <= rop_last;
+		ctrl_rel <= cm_out_valid & cm_out_user_last;
 
 	// Read interface
 	assign rd_row_rdy = rop_ready;
@@ -119,14 +143,19 @@ module hub75_fb_readout #(
 			rop_row_addr <= rd_row_addr;
 
 	// Counter
-	always @(posedge clk)
+	always @(posedge clk or negedge rop_running)
 		if (~rop_running) begin
 			rop_cnt  <= 0;
 			rop_last <= 1'b0;
-		end else begin
+		end else if (rop_move) begin
 			rop_cnt  <= rop_cnt + 1;
 			rop_last <= rop_cnt == (((N_COLS - 1) << CS2) | ((1 << CS2) - 2));
 		end
+
+	assign rop_done = rop_last & rop_move;
+
+	// Move pipeline ahead
+	assign rop_move = ~cm_in_valid | cm_in_ready;
 
 
 	// Line buffer
@@ -148,49 +177,83 @@ module hub75_fb_readout #(
 	);
 
 
-	// Frame buffer -> Line buffer
-	// ---------------------------
+	// Frame buffer -> Color mapper
+	// ----------------------------
 
 	// Frame buffer read
 	assign fb_addr = { rop_row_addr, rop_cnt };
+	assign fb_rden = rop_move;
 
-	// Delay the data from frame buffer so we get 32 bits at once
-	// also select the required bits to get BITDEPTH bits out of it.
-	generate
-		if (FB_DC > 1) begin
-			reg [(FB_DC-1)*FB_DW-1:0] fb_data_r;
-
-			always @(posedge clk)
-				fb_data_r <= fb_data;
-
-			assign fb_data_ext = { fb_data[BITDEPTH-(FB_DC-1)*FB_DW-1:0], fb_data_r };
-		end else
-			assign fb_data_ext = fb_data[BITDEPTH-1:0];
-	endgenerate
-
-	// Route data from frame buffer to line buffer
-	assign rolb_wr_data = { (N_BANKS){ fb_data_ext } };
-
-	// Sync LB command with read data from frame buffer (1 cycle delay)
-	reg i;
+	// Simulate a 'READ ENABLE' on the frame buffer by saving the previous
+	// data and muxing
+	always @(posedge clk)
+		fb_rden_r <= fb_rden;
 
 	always @(posedge clk)
-	begin
-		// Address is trivial
-		rolb_wr_addr <= rop_cnt[CW-1:CS2];
+		if (fb_rden_r)
+			fb_data_save <= fb_data;
 
-		// Mask: Check which bank we're writing ATM
+	assign fb_data_mux = fb_rden_r ? fb_data : fb_data_save;
+
+	// Shift register of frame buffer words to reconstruct and entire
+	// 'BITDEPTH' worth of bits.
+	always @(posedge clk)
+		if (rop_move)
+			fb_data_ext <= { fb_data_mux, fb_data_ext[(FB_DC*FB_DW)-1:FB_DW] };
+
+	// Map to the color mapper input
+	assign cm_in_data = fb_data_ext[BITDEPTH-1:0];
+
+	always @(posedge clk)
+		if (rop_move) begin
+			// This is synced with the RAM output
+			cm_in_user_addr_pre <= rop_cnt[CW-1:CS1];
+			cm_in_user_last_pre <= rop_last;
+			cm_in_valid_pre     <= rop_running & &rop_cnt[CS1-1:0];
+
+			// This is synced with the fb_data_ext signal
+			cm_in_user_addr <= cm_in_user_addr_pre;
+			cm_in_user_last <= cm_in_user_last_pre;
+			cm_in_valid     <= cm_in_valid_pre;
+		end
+
+
+	// Color mapping core
+	// ------------------
+
+	hub75_colormap #(
+		.N_CHANS(N_CHANS),
+		.N_PLANES(N_PLANES),
+		.BITDEPTH(BITDEPTH),
+		.USER_WIDTH(CW-CS1+1)
+	) cm_I (
+		.in_data(cm_in_data),
+		.in_user({cm_in_user_addr, cm_in_user_last}),
+		.in_valid(cm_in_valid),
+		.in_ready(cm_in_ready),
+		.out_data(cm_out_data),
+		.out_user({cm_out_user_addr, cm_out_user_last}),
+		.out_valid(cm_out_valid),
+		.clk(clk),
+		.rst(rst)
+	);
+
+
+	// Color mapper -> Line buffer
+	// ---------------------------
+
+	genvar i;
+
+	assign rolb_wr_data = { (N_BANKS){cm_out_data} };
+	assign rolb_wr_addr = cm_out_user_addr[CW-CS1-1:CS2-CS1];
+	assign rolb_wr_ena  = cm_out_valid;
+
+	generate
 		if (N_BANKS > 1)
 			for (i=0; i<N_BANKS; i=i+1)
-				rolb_wr_mask[i] <= (rop_cnt[CS2-1:CS1] == i);
+				assign rolb_wr_mask[i] = (cm_out_user_addr[CS2-CS1-1:0] == i);
 		else
-			rolb_wr_mask <= 1'b1;
-
-		// Write Enable: When we have a full word in the shift register
-		if (FB_DC > 1)
-			rolb_wr_ena <= rop_running & &rop_cnt[CS1-1:0];
-		else
-			rolb_wr_ena <= rop_running;
-	end
+			assign rolb_wr_mask = 1'b1;
+	endgenerate
 
 endmodule // hub75_fb_readout

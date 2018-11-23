@@ -19,6 +19,7 @@ ICE40_LIBS=$(shell yosys-config --datdir/ice40/cells_sim.v)
 OBJS=\
 	hub75_bcm.v \
 	hub75_blanking.v \
+	hub75_colormap.v \
 	hub75_fb_readout.v \
 	hub75_fb_writein.v \
 	hub75_framebuffer.v \
