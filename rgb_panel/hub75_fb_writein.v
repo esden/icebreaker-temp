@@ -15,6 +15,9 @@ module hub75_fb_writein #(
 	parameter integer N_ROWS   = 32,
 	parameter integer N_COLS   = 64,
 	parameter integer BITDEPTH = 24,
+	parameter integer FB_AW    = 13,
+	parameter integer FB_DW    = 16,
+	parameter integer FB_DC    = 2,
 
 	// Auto-set
 	parameter integer LOG_N_BANKS = $clog2(N_BANKS),
@@ -39,14 +42,19 @@ module hub75_fb_writein #(
 	output reg  ctrl_rel,
 
 	// Write In - Frame Buffer Access
-	output wire [12:0] fb_addr,
-	output wire [15:0] fb_data,
+	output wire [FB_AW-1:0] fb_addr,
+	output wire [FB_DW-1:0] fb_data,
 	output wire fb_wren,
 
 	// Clock / Reset
 	input  wire clk,
 	input  wire rst
 );
+
+	// Counter = [ col_addr : dc_idx ]
+	localparam integer CS = $clog2(FB_DC);
+	localparam integer CW = LOG_N_COLS + CS;
+
 
 	// Signals
 	// -------
@@ -61,13 +69,15 @@ module hub75_fb_writein #(
 	reg  [LOG_N_BANKS-1:0] wip_bank_addr;
 	reg  [LOG_N_ROWS-1:0]  wip_row_addr;
 
-	reg  [LOG_N_COLS:0] wip_cnt;
+	reg  [CW-1:0] wip_cnt;
 	reg  wip_last;
 
 	// Line buffer access
 	wire [LOG_N_COLS-1:0] wilb_col_addr;
 	wire [BITDEPTH-1:0] wilb_data;
 	wire wilb_rden;
+
+	wire [FB_DW*FB_DC-1:0] wilb_data_ext;
 
 	// Frame buffer access
 	reg  [12:0] fb_addr_i;
@@ -119,7 +129,7 @@ module hub75_fb_writein #(
 			wip_last <= 1'b0;
 		end else begin
 			wip_cnt  <= wip_cnt + 1;
-			wip_last <= (wip_cnt[LOG_N_COLS:1] == (N_COLS - 1)) & ~wip_cnt[0];
+			wip_last <= wip_cnt == (((N_COLS - 1) << CS) | ((1 << CS) - 2));
 		end
 
 
@@ -146,16 +156,22 @@ module hub75_fb_writein #(
 	// ---------------------------
 
 	// Line buffer read
-	assign wilb_col_addr = wip_cnt[LOG_N_COLS:1];
+	assign wilb_col_addr = wip_cnt[CW-1:CS];
 	assign wilb_rden = wip_running;
 
 	// Route data from frame buffer to line buffer
-	assign fb_data = fb_addr_i[0] ? {8'h00, wilb_data[23:16] } : wilb_data[15:0];
+		// Extend it to a multiple of the frame buffer data width
+	assign wilb_data_ext = { {(FB_DW*FB_DC-BITDEPTH){1'b0}}, wilb_data };
+
+		// Mux
+	assign fb_data = wilb_data_ext[FB_DW*fb_addr_i[CS-1:0]+:FB_DW];
 
 	// Sync FB command with the read data from line buffer (1 cycle delay)
 	always @(posedge clk)
 	begin
-		fb_addr_i <= { wip_row_addr, wip_cnt[LOG_N_COLS:1], wip_bank_addr, wip_cnt[0] };
+		fb_addr_i[FB_AW-1:CS] <= { wip_row_addr, wip_cnt[CW-1:CS], wip_bank_addr };
+		if (CS > 0)
+			fb_addr_i[CS-1:0] <= wip_cnt[CS-1:0];
 		fb_wren_i <= wip_running;
 	end
 

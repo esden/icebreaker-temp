@@ -304,7 +304,10 @@ module hub75_framebuffer #(
 		.N_BANKS(N_BANKS),
 		.N_ROWS(N_ROWS),
 		.N_COLS(N_COLS),
-		.BITDEPTH(BITDEPTH)
+		.BITDEPTH(BITDEPTH),
+		.FB_AW(FB_AW-1),
+		.FB_DW(FB_DW),
+		.FB_DC(FB_DC)
 	) writein_I (
 		.wr_bank_addr(wr_bank_addr),
 		.wr_row_addr(wr_row_addr),
