@@ -53,6 +53,81 @@ module hub75_framebuffer #(
 	input  wire clk,
 	input  wire rst
 );
+	// Internal params
+	// ---------------
+		// This tries to come up with the best memory layout and sets up
+		// a bunch of constants appropriately
+		//
+		// Address seen from access PoV ( fb_addr signal ) :
+		//            1 : Buffer Select
+		//  LOG_N_BANKS : Bank selection
+		//  LOG_N_ROWS  : Row address
+		//  LOG_N_COLS  : Column address
+		//  LOG_FB_DC   : Index of the word that compose the full color data
+		//                (when framebuffer width is thinner than BITDEPTH)
+		//  -------------
+		//  FB_AW       : (total number of bit in that address)
+		//
+		// To map this to the memory address ( mem_addr signal ):
+		//  * Add PAD_BITS at the MSBs (just in case we use less than 1 SPRAM)
+		//  * Drop OMUX_BITS + IMUX_BITS at the LSBs
+		//    - IMUX_BITS used for muxing down the 16 bit wide bus down to
+		//      FB_DW if needed
+		//    - OMUX_BITS used to mux between the SPRAMs used in // to
+		//      increase the total memory depth
+
+	`define MIN(_a, _b) ((_a) < (_b) ? (_a) : (_b))
+	`define MAX(_a, _b) ((_a) > (_b) ? (_a) : (_b))
+
+	// Round bitdepth to a power of 2 with minimum of 4
+	localparam integer LOG_BITDEPTH = (BITDEPTH > 4) ? $clog2(BITDEPTH) : 2;
+
+	// Number of SPRAM needed for frame buffer
+	localparam integer LOG_SPRAM_COUNT = `MAX(0, $clog2(1 << (1 + LOG_N_BANKS + LOG_N_ROWS + LOG_N_COLS + LOG_BITDEPTH)) - 18);
+	localparam integer SPRAM_COUNT = 1 << LOG_SPRAM_COUNT;
+
+	// Width of the framebuffer access bus
+	localparam integer FB_DW = `MIN((16 * SPRAM_COUNT), (1 << LOG_BITDEPTH));
+
+	// Number of SPRAM used in 'width-mode'
+	localparam integer LOG_SPRAM_WIDE = $clog2(FB_DW) - 4;
+	localparam integer SPRAM_WIDE = 1 << LOG_SPRAM_WIDE;
+
+	// Number of SPRAM used in 'depth-mode'
+	localparam integer LOG_SPRAM_DEEP = LOG_SPRAM_COUNT - LOG_SPRAM_WIDE;
+	localparam integer SPRAM_DEEP = 1 << LOG_SPRAM_DEEP;
+
+	// Number of framebuffer words for each pixel
+	localparam integer LOG_FB_DC = LOG_BITDEPTH - LOG_SPRAM_WIDE - 4;
+	localparam integer FB_DC = 1 << LOG_FB_DC;
+
+	// Framebuffer final address width
+	localparam integer FB_AW = 1 + LOG_N_BANKS + LOG_N_ROWS + LOG_N_COLS + LOG_FB_DC;
+
+	// Zero-bits to MSB pad SPRAM address (if using less than 1 SPRAM)
+	localparam integer PAD_BITS = `MAX(0, 18 - (1 + LOG_N_BANKS + LOG_N_ROWS + LOG_N_COLS + LOG_BITDEPTH));
+
+	// Number of bits used for muxing inside the wide memory bus down to FB_DW
+	localparam integer IMUX_BITS = $clog2(`MAX(1, 16 - FB_DW));
+
+	// Number of bits used for muxing between the SPRAM used in // to increase depth
+	localparam integer OMUX_BITS = LOG_SPRAM_DEEP;
+
+`ifdef SIM
+	initial begin
+		$display("Hub75 Frame Buffer config :");
+		$display(" - SPRAM_COUNT : %d", SPRAM_COUNT);
+		$display(" - SPRAM_WIDE  : %d", SPRAM_WIDE);
+		$display(" - SPRAM_DEEP  : %d", SPRAM_DEEP);
+		$display(" - FB_AW       : %d", FB_AW);
+		$display(" - FB_DW       : %d", FB_DW);
+		$display(" - FB_DC       : %d", FB_DC);
+		$display(" - PAD_BITS    : %d", PAD_BITS);
+		$display(" - IMUX_BITS   : %d", IMUX_BITS);
+		$display(" - OMUX_BITS   : %d", OMUX_BITS);
+	end
+`endif
+
 
 	// Signals
 	// -------
@@ -71,27 +146,37 @@ module hub75_framebuffer #(
 	reg  ro_gnt;
 	wire ro_rel;
 
+	// Raw signals from the storage cells
+	wire [16*SPRAM_WIDE-1:0] mem_di;
+	wire [16*SPRAM_WIDE-1:0] mem_do [0:SPRAM_DEEP-1];
+	wire [13:0] mem_addr;
+	wire [ 3:0] mem_mask;
+	wire mem_wren [0:SPRAM_DEEP-1];
+
+	wire [16*SPRAM_WIDE-1:0] mem_do_mux;
+
+
 	// Frame buffer access
-	wire [15:0] fb_di;
-	wire [15:0] fb_do;
-	wire [13:0] fb_addr;
-	wire [3:0] fb_mask;
+	wire [FB_DW-1:0] fb_di;
+	wire [FB_DW-1:0] fb_do;
+	wire [FB_AW-1:0] fb_addr;
 	wire fb_wren;
 
+	reg  [FB_AW-1:0] fb_addr_r;
 	reg  fb_pingpong;
 
 	// Write-in frame buffer access
-	wire [12:0] wifb_addr;
-	wire [15:0] wifb_data;
+	wire [FB_AW-2:0] wifb_addr;
+	wire [FB_DW-1:0] wifb_data;
 	wire wifb_wren;
 
 	// Read-out frame-buffer access
-	wire [12:0] rofb_addr;
-	wire [15:0] rofb_data;
+	wire [FB_AW-2:0] rofb_addr;
+	wire [FB_DW-1:0] rofb_data;
 
 
-	// Frame buffer
-	// ------------
+	// Control
+	// -------
 
 	// Arbitration logic
 	always @(posedge clk or posedge rst)
@@ -109,24 +194,6 @@ module hub75_framebuffer #(
 		end
 	end
 
-	// Storage
-`ifdef SIM
-	SB_SPRAM256KA_SIM mem_I (
-`else
-	SB_SPRAM256KA mem_I (
-`endif
-		.DATAIN(fb_di),
-		.ADDRESS(fb_addr),
-		.MASKWREN(fb_mask),
-		.WREN(fb_wren),
-		.CHIPSELECT(1'b1),
-		.CLOCK(clk),
-		.STANDBY(1'b0),
-		.SLEEP(1'b0),
-		.POWEROFF(1'b1),
-		.DATAOUT(fb_do)
-	);
-
 	// Double-Buffer
 	always @(posedge clk or posedge rst)
 		if (rst)
@@ -139,8 +206,95 @@ module hub75_framebuffer #(
 	assign fb_di = wifb_data;
 	assign rofb_data = fb_do;
 	assign fb_addr = wifb_wren ? { ~fb_pingpong, wifb_addr } : { fb_pingpong, rofb_addr };
-	assign fb_mask = 4'hf;
 	assign fb_wren = wifb_wren;
+
+
+	// Storage
+	// -------
+
+	genvar i, j;
+
+	// Generate memory elements
+	generate
+		for (i=0; i<SPRAM_DEEP; i=i+1)
+		begin
+			for (j=0; j<SPRAM_WIDE; j=j+1)
+			begin
+
+`ifdef SIM
+				SB_SPRAM256KA_SIM mem_I (
+`else
+				SB_SPRAM256KA mem_I (
+`endif
+					.DATAIN(mem_di[16*j+15:16*j]),
+					.ADDRESS(mem_addr),
+					.MASKWREN(mem_mask),
+					.WREN(mem_wren[i]),
+					.CHIPSELECT(1'b1),
+					.CLOCK(clk),
+					.STANDBY(1'b0),
+					.SLEEP(1'b0),
+					.POWEROFF(1'b1),
+					.DATAOUT(mem_do[i][16*j+15:16*j])
+				);
+
+			end
+		end
+	endgenerate
+
+	// Register address to have it available for muxing
+	always @(posedge clk)
+		fb_addr_r <= fb_addr;
+
+	// Map fb_addr -> mem_addr
+	assign mem_addr = { {(PAD_BITS){1'b0}}, fb_addr[FB_AW-1:OMUX_BITS+IMUX_BITS] };
+
+	// Output muxing
+	generate
+		// Mux across the SPRAM used in parallel for depth (if needed)
+		if (OMUX_BITS > 0)
+			assign mem_do_mux = mem_do[fb_addr_r[OMUX_BITS+IMUX_BITS-1:IMUX_BITS]];
+		else
+			assign mem_do_mux = mem_do[0];
+
+		// Mux down to FB_DW (if needed)
+		if (IMUX_BITS > 0)
+			assign fb_do = mem_do_mux[FB_DW*fb_addr_r[IMUX_BITS-1:0]+:FB_DW];
+		else
+			assign fb_do = mem_do_mux;
+	endgenerate
+
+	// Map fb_di -> mem_di
+	generate
+		for (i=0; i<(1<<IMUX_BITS); i=i+1)
+			assign mem_di[FB_DW*i+:FB_DW] = fb_di;
+	endgenerate
+
+	// Input masking / write-enables
+	generate
+		// Write Enable
+		if (OMUX_BITS > 0)
+			for (i=0; i<SPRAM_DEEP; i=i+1)
+				assign mem_wren[i] = fb_wren & (fb_addr[IMUX_BITS+:OMUX_BITS] == i);
+		else
+			assign mem_wren[0] = fb_wren;
+
+		// Mask nibbles (if needed)
+		if (IMUX_BITS == 2)
+			assign mem_mask = {
+				fb_addr[1:0] == 2'b11,
+				fb_addr[1:0] == 2'b10,
+				fb_addr[1:0] == 2'b01,
+				fb_addr[1:0] == 2'b00
+			};
+		else if (IMUX_BITS == 1)
+			assign mem_mask = {
+				 fb_addr[0],  fb_addr[0],
+				~fb_addr[0], ~fb_addr[0]
+			};
+		else
+			assign mem_mask = 4'hf;
+	endgenerate
 
 
 	// Write-in
