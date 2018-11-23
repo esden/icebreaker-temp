@@ -337,7 +337,10 @@ module hub75_framebuffer #(
 		.N_COLS(N_COLS),
 		.N_CHANS(N_CHANS),
 		.N_PLANES(N_PLANES),
-		.BITDEPTH(BITDEPTH)
+		.BITDEPTH(BITDEPTH),
+		.FB_AW(FB_AW-1),
+		.FB_DW(FB_DW),
+		.FB_DC(FB_DC)
 	) readout_I (
 		.rd_row_addr(rd_row_addr),
 		.rd_row_load(rd_row_load),
