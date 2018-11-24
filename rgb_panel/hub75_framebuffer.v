@@ -113,7 +113,6 @@ module hub75_framebuffer #(
 	// Number of bits used for muxing between the SPRAM used in // to increase depth
 	localparam integer OMUX_BITS = LOG_SPRAM_DEEP;
 
-`ifdef SIM
 	initial begin
 		$display("Hub75 Frame Buffer config :");
 		$display(" - SPRAM_COUNT : %d", SPRAM_COUNT);
@@ -126,7 +125,6 @@ module hub75_framebuffer #(
 		$display(" - IMUX_BITS   : %d", IMUX_BITS);
 		$display(" - OMUX_BITS   : %d", OMUX_BITS);
 	end
-`endif
 
 
 	// Signals
