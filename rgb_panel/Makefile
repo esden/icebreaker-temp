@@ -20,6 +20,7 @@ OBJS=\
 	hub75_bcm.v \
 	hub75_blanking.v \
 	hub75_colormap.v \
+	hub75_gamma.v \
 	hub75_fb_readout.v \
 	hub75_fb_writein.v \
 	hub75_framebuffer.v \
@@ -37,7 +38,13 @@ TESTBENCHES=\
 	hub75_top_tb \
 	spi_flash_reader_tb
 
-all: $(PROJ).bin $(TESTBENCHES)
+DATA_GEN=\
+	gamma_table.hex
+
+all: $(DATA_GEN) $(PROJ).bin $(TESTBENCHES)
+
+gamma_table.hex: mkgamma.py
+	./mkgamma.py > $@
 
 %_tb: %_tb.v $(ICE40_LIBS) $(OBJS)
 	iverilog -Wall -DSIM=1 -o $@ $(ICE40_LIBS) $(OBJS) $<
@@ -72,7 +79,7 @@ data-prog: $(PROJ).bin nyan_glitch_64x64x16.raw.xz
 	$(ICEPROG) $(PROJ)-data.bin
 
 clean:
-	rm -f $(PROJ).blif $(PROJ).json $(PROJ).asc $(PROJ).rpt $(PROJ).bin $(TESTBENCHES) *.vcd
+	rm -f $(PROJ).blif $(PROJ).json $(PROJ).asc $(PROJ).rpt $(PROJ).bin $(TESTBENCHES) *.vcd $(DATA_GEN)
 
 .SECONDARY:
 .PHONY: all prog clean
