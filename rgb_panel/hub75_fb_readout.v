@@ -149,7 +149,7 @@ module hub75_fb_readout #(
 			rop_last <= 1'b0;
 		end else if (rop_move) begin
 			rop_cnt  <= rop_cnt + 1;
-			rop_last <= rop_cnt == (((N_COLS - 1) << CS2) | ((1 << CS2) - 2));
+			rop_last <= rop_cnt == ((N_COLS << CS2) - 2);
 		end
 
 	assign rop_done = rop_last & rop_move;

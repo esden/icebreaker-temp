@@ -129,7 +129,7 @@ module hub75_fb_writein #(
 			wip_last <= 1'b0;
 		end else begin
 			wip_cnt  <= wip_cnt + 1;
-			wip_last <= wip_cnt == (((N_COLS - 1) << CS) | ((1 << CS) - 2));
+			wip_last <= wip_cnt == ((N_COLS << CS) - 2);
 		end
 
 
