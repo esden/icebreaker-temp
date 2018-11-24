@@ -112,7 +112,11 @@ module hub75_top_tb;
 	);
 
 `ifdef PATTERN
-	pgen pgen_I (
+	pgen #(
+		.N_ROWS(N_BANKS * N_ROWS),
+		.N_COLS(N_COLS),
+		.BITDEPTH(BITDEPTH)
+	) pgen_I (
 		.fbw_row_addr({fbw_bank_addr, fbw_row_addr}),
 		.fbw_row_store(fbw_row_store),
 		.fbw_row_rdy(fbw_row_rdy),
@@ -126,7 +130,13 @@ module hub75_top_tb;
 		.rst(rst)
 	);
 `else
-	vgen vgen_I (
+	vgen #(
+		.ADDR_BASE(24'h040000),
+		.N_FRAMES(30),
+		.N_ROWS(N_BANKS * N_ROWS),
+		.N_COLS(N_COLS),
+		.BITDEPTH(BITDEPTH)
+	) vgen_I (
 		.sr_addr(sr_addr),
 		.sr_len(sr_len),
 		.sr_go(sr_go),
