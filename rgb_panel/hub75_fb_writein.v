@@ -164,7 +164,12 @@ module hub75_fb_writein #(
 	assign wilb_data_ext = { {(FB_DW*FB_DC-BITDEPTH){1'b0}}, wilb_data };
 
 		// Mux
-	assign fb_data = wilb_data_ext[FB_DW*fb_addr_i[CS-1:0]+:FB_DW];
+	generate
+		if (CS > 0)
+			assign fb_data = wilb_data_ext[FB_DW*fb_addr_i[CS-1:0]+:FB_DW];
+		else
+			assign fb_data = wilb_data_ext;
+	endgenerate
 
 	// Sync FB command with the read data from line buffer (1 cycle delay)
 	always @(posedge clk)
