@@ -207,21 +207,28 @@ module hub75_fb_readout #(
 	// Map to the color mapper input
 	assign cm_in_data = fb_data_ext[BITDEPTH-1:0];
 
+	always @(posedge clk or posedge rst)
+		if (rst) begin
+			cm_in_valid_pre <= 1'b0;
+			cm_in_valid <= 1'b0;
+		end else if (rop_move) begin
+			if (CS1 > 0)
+				cm_in_valid_pre <= rop_running & &rop_cnt[CS1-1:0];
+			else
+				cm_in_valid_pre <= rop_running;
+
+			cm_in_valid <= cm_in_valid_pre;
+		end
+
 	always @(posedge clk)
 		if (rop_move) begin
 			// This is synced with the RAM output
 			cm_in_user_addr_pre <= rop_cnt[CW-1:CS1];
 			cm_in_user_last_pre <= rop_last;
 
-			if (CS1 > 0)
-				cm_in_valid_pre <= rop_running & &rop_cnt[CS1-1:0];
-			else
-				cm_in_valid_pre <= rop_running;
-
 			// This is synced with the fb_data_ext signal
 			cm_in_user_addr <= cm_in_user_addr_pre;
 			cm_in_user_last <= cm_in_user_last_pre;
-			cm_in_valid     <= cm_in_valid_pre;
 		end
 
 
