@@ -10,6 +10,9 @@
 
 `default_nettype none
 
+//`define PATTERN
+`define VIDEO
+
 module top (
 	// RGB panel PMOD
 	output wire [4:0] hub75_addr,
@@ -67,17 +70,6 @@ module top (
 	wire frame_swap;
 	wire frame_rdy;
 
-	// SPI Reader
-`ifndef PATTERN
-	wire [23:0] sr_addr;
-	wire [15:0] sr_len;
-	wire sr_go;
-	wire sr_rdy;
-
-	wire [7:0] sr_data;
-	wire sr_valid;
-`endif
-
 
 	// Hub75 driver
 	// ------------
@@ -113,6 +105,10 @@ module top (
 		.rst(rst)
 	);
 
+
+	// Pattern generator
+	// -----------------
+
 `ifdef PATTERN
 	pgen #(
 		.N_ROWS(N_BANKS * N_ROWS),
@@ -131,7 +127,24 @@ module top (
 		.clk(clk),
 		.rst(rst)
 	);
-`else
+`endif
+
+
+	// Video generator (from SPI flash)
+	// ---------------
+
+`ifdef VIDEO
+	// Signals
+		// SPI reader interface
+	wire [23:0] sr_addr;
+	wire [15:0] sr_len;
+	wire sr_go;
+	wire sr_rdy;
+
+	wire [7:0] sr_data;
+	wire sr_valid;
+
+	// Main video generator / controller
 	vgen #(
 		.ADDR_BASE(24'h040000),
 		.N_FRAMES(30),
@@ -158,6 +171,7 @@ module top (
 		.rst(rst)
 	);
 
+	// SPI reader to fetch frames from flash
 	spi_flash_reader spi_reader_I (
 		.spi_mosi(spi_mosi),
 		.spi_miso(spi_miso),
