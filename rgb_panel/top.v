@@ -129,7 +129,12 @@ module top (
 		.rst(rst)
 	);
 `else
-	vgen vgen_I (
+	vgen #(
+		.ADDR_BASE(24'h040000),
+		.N_FRAMES(30),
+		.N_ROWS(N_BANKS * N_ROWS),
+		.N_COLS(N_COLS)
+	) vgen_I (
 		.sr_addr(sr_addr),
 		.sr_len(sr_len),
 		.sr_go(sr_go),

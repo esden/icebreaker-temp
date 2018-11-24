@@ -10,7 +10,16 @@
 
 `default_nettype none
 
-module vgen (
+module vgen #(
+	parameter ADDR_BASE = 24'h040000,
+	parameter integer N_FRAMES = 30,
+	parameter integer N_ROWS   = 64,	// # of rows (must be power of 2!!!)
+	parameter integer N_COLS   = 64,	// # of columns
+
+	// Auto-set
+	parameter integer LOG_N_ROWS  = $clog2(N_ROWS),
+	parameter integer LOG_N_COLS  = $clog2(N_COLS)
+)(
 	// SPI reader interface
 	output wire [23:0] sr_addr,
 	output wire [15:0] sr_len,
@@ -21,13 +30,13 @@ module vgen (
 	input wire sr_valid,
 
 	// Frame Buffer write interface
-	output wire [ 5:0] fbw_row_addr,
+	output wire [LOG_N_ROWS-1:0] fbw_row_addr,
 	output wire fbw_row_store,
 	input  wire fbw_row_rdy,
 	output wire fbw_row_swap,
 
 	output wire [23:0] fbw_data,
-	output wire [ 5:0] fbw_col_addr,
+	output wire [LOG_N_COLS-1:0] fbw_col_addr,
 	output wire fbw_wren,
 
 	output wire frame_swap,
@@ -37,6 +46,8 @@ module vgen (
 	input  wire clk,
 	input  wire rst
 );
+
+	localparam integer FW = 23 - LOG_N_ROWS - LOG_N_COLS;
 
 	// Signals
 	// -------
@@ -53,13 +64,16 @@ module vgen (
 	reg  [2:0] fsm_state_next;
 
 	// Counters
-	reg [11:0] cnt_frame;
+	reg [FW-1:0] cnt_frame;
 	reg cnt_frame_last;
 
-	reg [5:0] cnt_row;
+	reg [7:0] cnt_rep;
+	reg cnt_rep_last;
+
+	reg [LOG_N_ROWS-1:0] cnt_row;
 	reg cnt_row_last;
 
-	reg [6:0] cnt_col;
+	reg [LOG_N_COLS:0] cnt_col;
 
 	// SPI
 	reg [7:0] sr_data_r;
@@ -114,9 +128,16 @@ module vgen (
 		if (rst) begin
 			cnt_frame <= 0;
 			cnt_frame_last <= 1'b0;
-		end else if ((fsm_state == ST_ROW_WAIT) && fbw_row_rdy) begin
-			cnt_frame <= cnt_frame_last ? 12'h000 : (cnt_frame + 1);
-			cnt_frame_last <= (cnt_frame == 12'h0ee);
+		end else if ((fsm_state == ST_ROW_WAIT) && fbw_row_rdy && cnt_rep_last) begin
+			cnt_frame <= cnt_frame_last ? { (FW){1'b0} } : (cnt_frame + 1);
+			cnt_frame_last <= (cnt_frame == (N_FRAMES - 2));
+		end
+
+	// Repeat counter
+	always @(posedge clk)
+		if ((fsm_state == ST_ROW_WAIT) && fbw_row_rdy) begin
+			cnt_rep <= cnt_rep_last ? 8'h00 : (cnt_rep + 1);
+			cnt_rep_last <= (cnt_rep == 6);
 		end
 
 	// Row counter
@@ -126,7 +147,7 @@ module vgen (
 			cnt_row_last <= 1'b0;
 		end else if ((fsm_state == ST_ROW_WRITE) && fbw_row_rdy) begin
 			cnt_row <= cnt_row + 1;
-			cnt_row_last <= cnt_row == 6'b111110;
+			cnt_row_last <= (cnt_row == (1 << LOG_N_ROWS) - 2);
 		end
 
 	// Column counter
@@ -141,14 +162,8 @@ module vgen (
 	// ----------
 
 	// Requests
-	assign sr_addr = {
-		6'b000001,		// 6b - Skip beginning of the flash
-		cnt_frame[7:3],	// 5b - One video = 32 frames (max)
-		cnt_row,		// 6b - One image = 64 rows
-		7'd0			// 7b - One row = 128 bytes
-	};
-	assign sr_len = 16'h007f;	// 128 bytes
-
+	assign sr_addr = { cnt_frame, cnt_row, {(LOG_N_COLS+1){1'b0}} } + ADDR_BASE;
+	assign sr_len = (N_COLS << 1) - 1;
 	assign sr_go = (fsm_state == ST_ROW_SPI_CMD);
 
 	// Data
