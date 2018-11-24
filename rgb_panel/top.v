@@ -34,6 +34,7 @@ module top (
 	localparam integer N_COLS   = 64;
 	localparam integer N_CHANS  = 3;
 	localparam integer N_PLANES = 8;
+	localparam integer BITDEPTH = 8;
 
 	localparam integer LOG_N_BANKS = $clog2(N_BANKS);
 	localparam integer LOG_N_ROWS  = $clog2(N_ROWS);
@@ -59,7 +60,7 @@ module top (
 	wire fbw_row_rdy;
 	wire fbw_row_swap;
 
-	wire [(N_CHANS * N_PLANES)-1:0] fbw_data;
+	wire [BITDEPTH-1:0] fbw_data;
 	wire [LOG_N_COLS-1:0] fbw_col_addr;
 	wire fbw_wren;
 
@@ -78,15 +79,16 @@ module top (
 `endif
 
 
-	// Hub75
-	// -----
+	// Hub75 driver
+	// ------------
 
 	hub75_top #(
 		.N_BANKS(N_BANKS),
 		.N_ROWS(N_ROWS),
 		.N_COLS(N_COLS),
 		.N_CHANS(N_CHANS),
-		.N_PLANES(N_PLANES)
+		.N_PLANES(N_PLANES),
+		.BITDEPTH(BITDEPTH)
 	) hub75_I (
 		.hub75_addr(hub75_addr),
 		.hub75_data(hub75_data),
@@ -103,9 +105,9 @@ module top (
 		.fbw_wren(fbw_wren),
 		.frame_swap(frame_swap),
 		.frame_rdy(frame_rdy),
-		.cfg_pre_latch_len(8'h80),
-		.cfg_latch_len(8'h80),
-		.cfg_post_latch_len(8'h80),
+		.cfg_pre_latch_len(8'h06),
+		.cfg_latch_len(8'h06),
+		.cfg_post_latch_len(8'h06),
 		.cfg_bcm_bit_len(8'h06),
 		.clk(clk),
 		.rst(rst)
@@ -114,7 +116,8 @@ module top (
 `ifdef PATTERN
 	pgen #(
 		.N_ROWS(N_BANKS * N_ROWS),
-		.N_COLS(N_COLS)
+		.N_COLS(N_COLS),
+		.BITDEPTH(BITDEPTH)
 	) pgen_I (
 		.fbw_row_addr({fbw_bank_addr, fbw_row_addr}),
 		.fbw_row_store(fbw_row_store),
@@ -133,7 +136,8 @@ module top (
 		.ADDR_BASE(24'h040000),
 		.N_FRAMES(30),
 		.N_ROWS(N_BANKS * N_ROWS),
-		.N_COLS(N_COLS)
+		.N_COLS(N_COLS),
+		.BITDEPTH(BITDEPTH)
 	) vgen_I (
 		.sr_addr(sr_addr),
 		.sr_len(sr_len),
@@ -200,4 +204,3 @@ module top (
 `endif
 
 endmodule // top
-

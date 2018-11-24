@@ -13,6 +13,7 @@
 module pgen #(
 	parameter integer N_ROWS   = 64,	// # of rows (must be power of 2!!!)
 	parameter integer N_COLS   = 64,	// # of columns
+	parameter integer BITDEPTH = 24,
 
 	// Auto-set
 	parameter integer LOG_N_ROWS  = $clog2(N_ROWS),
@@ -24,7 +25,7 @@ module pgen #(
 	input  wire fbw_row_rdy,
 	output wire fbw_row_swap,
 
-	output wire [23:0] fbw_data,
+	output wire [BITDEPTH-1:0] fbw_data,
 	output wire [LOG_N_COLS-1:0] fbw_col_addr,
 	output wire fbw_wren,
 
@@ -55,6 +56,9 @@ module pgen #(
 	reg [LOG_N_COLS-1:0] cnt_col;
 	reg cnt_row_last;
 	reg cnt_col_last;
+
+	// Output
+	wire [7:0] color [0:2];
 
 
 	// FSM
@@ -134,8 +138,8 @@ module pgen #(
 	generate
 		for (i=0; i<8; i=i+1)
 		begin
-			assign fbw_data[23-i] = cnt_col[LOG_N_COLS-1-(i%LOG_N_COLS)];
-			assign fbw_data[ 7-i] = cnt_row[LOG_N_ROWS-1-(i%LOG_N_ROWS)];
+			assign color[0][7-i] = cnt_col[LOG_N_COLS-1-(i%LOG_N_COLS)];
+			assign color[2][7-i] = cnt_row[LOG_N_ROWS-1-(i%LOG_N_ROWS)];
 		end
 	endgenerate
 
@@ -146,13 +150,23 @@ module pgen #(
 	wire [3:0] a0 = 4'hf - frame[3:0];
 	wire [3:0] a1 = frame[3:0];
 
-	assign fbw_data[15: 8] =
+	assign color[1] =
 		(((cnt_col[3:0] == c0) || (cnt_row[3:0] == c0)) ? {a0, a0} : 8'h00) +
 		(((cnt_col[3:0] == c1) || (cnt_row[3:0] == c1)) ? {a1, a1} : 8'h00);
 
 	// Write enable and address
 	assign fbw_wren = fsm_state == ST_GEN_ROW;
 	assign fbw_col_addr = cnt_col;
+
+	// Map to color
+	generate
+		if (BITDEPTH == 8)
+			assign fbw_data = { color[0][7:5], color[1][7:5], color[2][7:6] };
+		else if (BITDEPTH == 16)
+			assign fbw_data = { color[0][7:3], color[1][7:2], color[2][7:3] };
+		else if (BITDEPTH == 24)
+			assign fbw_data = { color[0], color[1], color[2] };
+	endgenerate
 
 
 	// Back-Buffer store

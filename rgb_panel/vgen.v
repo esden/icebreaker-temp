@@ -15,6 +15,7 @@ module vgen #(
 	parameter integer N_FRAMES = 30,
 	parameter integer N_ROWS   = 64,	// # of rows (must be power of 2!!!)
 	parameter integer N_COLS   = 64,	// # of columns
+	parameter integer BITDEPTH = 24,
 
 	// Auto-set
 	parameter integer LOG_N_ROWS  = $clog2(N_ROWS),
@@ -78,6 +79,9 @@ module vgen #(
 	// SPI
 	reg [7:0] sr_data_r;
 	wire [15:0] sr_data16;
+
+	// Output
+	wire [7:0] color [0:2];
 
 
 	// FSM
@@ -179,9 +183,11 @@ module vgen #(
 
 	assign fbw_wren = sr_valid & cnt_col[0];
 	assign fbw_col_addr = cnt_col[6:1];
-	assign fbw_data[23:16] = { sr_data16[15:11], sr_data16[15:13] };
-	assign fbw_data[15: 8] = { sr_data16[10: 5], sr_data16[10: 9] };
-	assign fbw_data[ 7: 0] = { sr_data16[ 4: 0], sr_data16[ 4: 2] };
+
+	// Map to color
+	assign color[0] = { sr_data16[15:11], sr_data16[15:13] };
+	assign color[1] = { sr_data16[10: 5], sr_data16[10: 9] };
+	assign color[2] = { sr_data16[ 4: 0], sr_data16[ 4: 2] };
 
 
 	// Back-Buffer store
@@ -190,6 +196,15 @@ module vgen #(
 	assign fbw_row_addr  = cnt_row;
 	assign fbw_row_store = (fsm_state == ST_ROW_WRITE) && fbw_row_rdy;
 	assign fbw_row_swap  = (fsm_state == ST_ROW_WRITE) && fbw_row_rdy;
+
+	generate
+		if (BITDEPTH == 8)
+			assign fbw_data = { color[0][7:5], color[1][7:5], color[2][7:6] };
+		else if (BITDEPTH == 16)
+			assign fbw_data = { color[0][7:3], color[1][7:2], color[2][7:3] };
+		else if (BITDEPTH == 24)
+			assign fbw_data = { color[0], color[1], color[2] };
+	endgenerate
 
 
 	// Next frame
