@@ -43,6 +43,11 @@ module vgen #(
 	output wire frame_swap,
 	input  wire frame_rdy,
 
+	// UI
+	input  wire ui_up,
+	input  wire ui_mode,
+	input  wire ui_down,
+
 	// Clock / Reset
 	input  wire clk,
 	input  wire rst
@@ -64,11 +69,17 @@ module vgen #(
 	reg  [2:0] fsm_state;
 	reg  [2:0] fsm_state_next;
 
+	// UI
+	reg mode;
+	reg [3:0] cfg_rep;
+	reg [1:0] frame_sel;
+
 	// Counters
 	reg [FW-1:0] cnt_frame;
+	reg cnt_frame_first;
 	reg cnt_frame_last;
 
-	reg [7:0] cnt_rep;
+	reg [3:0] cnt_rep;
 	reg cnt_rep_last;
 
 	reg [LOG_N_ROWS-1:0] cnt_row;
@@ -124,24 +135,65 @@ module vgen #(
 	end
 
 
+	// UI handling
+	// -----------
+
+	// Mode toggle
+	always @(posedge clk or posedge rst)
+		if (rst)
+			mode <= 1'b0;
+		else
+			mode <= mode ^ ui_mode;
+
+	// Repetition counter
+	always @(posedge clk or posedge rst)
+		if (rst)
+			cfg_rep <= 4'h6;
+		else if (~mode) begin
+			if (ui_down & ~&cfg_rep)
+				cfg_rep <= cfg_rep + 1;
+			else if (ui_up & |cfg_rep)
+				cfg_rep <= cfg_rep - 1;
+		end
+
+	// Latch request for prev / next frame
+	always @(posedge clk)
+		if (~mode)
+			frame_sel <= cnt_rep_last ? 2'b10 : 2'b00;
+		else if ((fsm_state == ST_ROW_WAIT) && fbw_row_rdy)
+			frame_sel <= 2'b00;
+		else if (ui_up)
+			frame_sel <= 2'b10;
+		else if (ui_down)
+			frame_sel <= 2'b11;
+
+
 	// Counters
 	// --------
 
 	// Frame counter
 	always @(posedge clk or posedge rst)
-		if (rst) begin
+		if (rst)
 			cnt_frame <= 0;
-			cnt_frame_last <= 1'b0;
-		end else if ((fsm_state == ST_ROW_WAIT) && fbw_row_rdy && cnt_rep_last) begin
-			cnt_frame <= cnt_frame_last ? { (FW){1'b0} } : (cnt_frame + 1);
-			cnt_frame_last <= (cnt_frame == (N_FRAMES - 2));
-		end
+		else if ((fsm_state == ST_ROW_WAIT) && fbw_row_rdy && frame_sel[1])
+			if (frame_sel[0])
+				cnt_frame <= cnt_frame_last  ? { (FW){1'b0} } : (cnt_frame + 1);
+			else
+				cnt_frame <= cnt_frame_first ? (N_FRAMES - 1) : (cnt_frame - 1);
+
+	always @(posedge clk)
+	begin
+		// Those end up one cycle late vs 'cnt_frame' but that's fine, they
+		// won't be used until a while later
+		cnt_frame_last  <= (cnt_frame == (N_FRAMES - 1));
+		cnt_frame_first <= (cnt_frame == 0);
+	end
 
 	// Repeat counter
 	always @(posedge clk)
 		if ((fsm_state == ST_ROW_WAIT) && fbw_row_rdy) begin
-			cnt_rep <= cnt_rep_last ? 8'h00 : (cnt_rep + 1);
-			cnt_rep_last <= (cnt_rep == 6);
+			cnt_rep <= cnt_rep_last ? 4'h0 : (cnt_rep + 1);
+			cnt_rep_last <= (cnt_rep == cfg_rep);
 		end
 
 	// Row counter

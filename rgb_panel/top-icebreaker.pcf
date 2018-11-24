@@ -20,5 +20,10 @@ set_io spi_miso 17
 set_io spi_cs_n 16
 set_io spi_clk 15
 
+# PMOD2 buttons
+set_io pmod_btn[0] 20
+set_io pmod_btn[1] 19
+set_io pmod_btn[2] 18
+
 # Clock
 set_io clk_12m 35

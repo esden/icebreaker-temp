@@ -28,6 +28,7 @@ OBJS=\
 	hub75_scan.v \
 	hub75_shift.v \
 	hub75_top.v \
+	glitch_filter.v \
 	pgen.v \
 	vgen.v \
 	spi_flash_reader.v \

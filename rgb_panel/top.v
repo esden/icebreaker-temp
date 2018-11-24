@@ -27,6 +27,9 @@ module top (
 	output wire spi_cs_n,
 	output wire spi_clk,
 
+	// PMOD2 buttons
+	input  wire [2:0] pmod_btn,
+
 	// Clock
 	input  wire clk_12m
 );
@@ -144,6 +147,11 @@ module top (
 	wire [7:0] sr_data;
 	wire sr_valid;
 
+		// UI
+	wire btn_up;
+	wire btn_mode;
+	wire btn_down;
+
 	// Main video generator / controller
 	vgen #(
 		.ADDR_BASE(24'h040000),
@@ -167,6 +175,9 @@ module top (
 		.fbw_wren(fbw_wren),
 		.frame_swap(frame_swap),
 		.frame_rdy(frame_rdy),
+		.ui_up(btn_up),
+		.ui_mode(btn_mode),
+		.ui_down(btn_down),
 		.clk(clk),
 		.rst(rst)
 	);
@@ -183,6 +194,31 @@ module top (
 		.rdy(sr_rdy),
 		.data(sr_data),
 		.valid(sr_valid),
+		.clk(clk),
+		.rst(rst)
+	);
+
+	// UI
+	glitch_filter #( .L(8) ) gf_down_I (
+		.pin_iob_reg(pmod_btn[0]),
+		.cond(1'b1),
+		.rise(btn_down),
+		.clk(clk),
+		.rst(rst)
+	);
+
+	glitch_filter #( .L(8) ) gf_mode_I (
+		.pin_iob_reg(pmod_btn[1]),
+		.cond(1'b1),
+		.rise(btn_mode),
+		.clk(clk),
+		.rst(rst)
+	);
+
+	glitch_filter #( .L(8) ) gf_up_I (
+		.pin_iob_reg(pmod_btn[2]),
+		.cond(1'b1),
+		.rise(btn_up),
 		.clk(clk),
 		.rst(rst)
 	);
