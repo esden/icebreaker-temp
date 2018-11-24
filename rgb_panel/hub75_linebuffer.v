@@ -45,7 +45,7 @@ module hub75_linebuffer #(
 		if (wr_ena)
 			for (i=0; i<N_WORDS; i=i+1)
 				if (wr_mask[i])
-					ram[wr_addr][((i+1)*WORD_WIDTH)-1 -: WORD_WIDTH] = wr_data[((i+1)*WORD_WIDTH)-1 -: WORD_WIDTH];
+					ram[wr_addr][((i+1)*WORD_WIDTH)-1 -: WORD_WIDTH] <= wr_data[((i+1)*WORD_WIDTH)-1 -: WORD_WIDTH];
 	end
 
 endmodule // hub75_linebuffer
