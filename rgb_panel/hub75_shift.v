@@ -50,6 +50,7 @@ module hub75_shift #(
 	reg active_2;
 	reg active_3;
 	reg [LOG_N_COLS:0] cnt_0;
+	reg cnt_last_0;
 
 	wire [(N_BANKS*N_CHANS)-1:0] ram_data_bit;
 	reg  [(N_BANKS*N_CHANS)-1:0] data_2;
@@ -66,18 +67,21 @@ module hub75_shift #(
 			active_2 <= 1'b0;
 			active_3 <= 1'b0;
 		end else begin
-			active_0 <= (active_0 & ~cnt_0[LOG_N_COLS]) | ctrl_go;
-			active_1 <= active_0 & ~cnt_0[LOG_N_COLS];	// Post-Fix overflow
+			active_0 <= (active_0 & ~cnt_last_0) | ctrl_go;
+			active_1 <= active_0;
 			active_2 <= active_1;
 			active_3 <= active_2;
 		end
 
 	// Counter
 	always @(posedge clk)
-		if (ctrl_go)
+		if (ctrl_go) begin
 			cnt_0 <= 0;
-		else if (active_0)
+			cnt_last_0 <= 1'b0;
+		end else if (active_0) begin
 			cnt_0 <= cnt_0 + 1;
+			cnt_last_0 <= (cnt_0 == (N_COLS - 2));
+		end
 
 	// Ready ?
 	assign ctrl_rdy = ~active_0;
