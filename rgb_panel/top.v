@@ -37,7 +37,7 @@ module top (
 	localparam integer N_COLS   = 64;
 	localparam integer N_CHANS  = 3;
 	localparam integer N_PLANES = 8;
-	localparam integer BITDEPTH = 8;
+	localparam integer BITDEPTH = 16;
 
 	localparam integer LOG_N_BANKS = $clog2(N_BANKS);
 	localparam integer LOG_N_ROWS  = $clog2(N_ROWS);
