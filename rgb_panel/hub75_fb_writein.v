@@ -80,7 +80,7 @@ module hub75_fb_writein #(
 	wire [FB_DW*FB_DC-1:0] wilb_data_ext;
 
 	// Frame buffer access
-	reg  [12:0] fb_addr_i;
+	reg  [FB_AW-1:0] fb_addr_i;
 	reg  fb_wren_i;
 
 
