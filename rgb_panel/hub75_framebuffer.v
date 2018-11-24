@@ -90,7 +90,7 @@ module hub75_framebuffer #(
 	localparam integer FB_DW = `MIN((16 * SPRAM_COUNT), (1 << LOG_BITDEPTH));
 
 	// Number of SPRAM used in 'width-mode'
-	localparam integer LOG_SPRAM_WIDE = $clog2(FB_DW) - 4;
+	localparam integer LOG_SPRAM_WIDE = $clog2(`MAX(FB_DW,16)) - 4;
 	localparam integer SPRAM_WIDE = 1 << LOG_SPRAM_WIDE;
 
 	// Number of SPRAM used in 'depth-mode'
@@ -98,7 +98,7 @@ module hub75_framebuffer #(
 	localparam integer SPRAM_DEEP = 1 << LOG_SPRAM_DEEP;
 
 	// Number of framebuffer words for each pixel
-	localparam integer LOG_FB_DC = LOG_BITDEPTH - LOG_SPRAM_WIDE - 4;
+	localparam integer LOG_FB_DC = LOG_BITDEPTH - $clog2(FB_DW);
 	localparam integer FB_DC = 1 << LOG_FB_DC;
 
 	// Framebuffer final address width
@@ -108,7 +108,7 @@ module hub75_framebuffer #(
 	localparam integer PAD_BITS = `MAX(0, 18 - (1 + LOG_N_BANKS + LOG_N_ROWS + LOG_N_COLS + LOG_BITDEPTH));
 
 	// Number of bits used for muxing inside the wide memory bus down to FB_DW
-	localparam integer IMUX_BITS = $clog2(`MAX(1, 16 - FB_DW));
+	localparam integer IMUX_BITS = $clog2(`MAX(1, 16 / FB_DW));
 
 	// Number of bits used for muxing between the SPRAM used in // to increase depth
 	localparam integer OMUX_BITS = LOG_SPRAM_DEEP;
