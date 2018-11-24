@@ -10,15 +10,22 @@
 
 `default_nettype none
 
-module pgen (
+module pgen #(
+	parameter integer N_ROWS   = 64,	// # of rows (must be power of 2!!!)
+	parameter integer N_COLS   = 64,	// # of columns
+
+	// Auto-set
+	parameter integer LOG_N_ROWS  = $clog2(N_ROWS),
+	parameter integer LOG_N_COLS  = $clog2(N_COLS)
+)(
 	// Frame Buffer write interface
-	output wire [ 5:0] fbw_row_addr,
+	output wire [LOG_N_ROWS-1:0] fbw_row_addr,
 	output wire fbw_row_store,
 	input  wire fbw_row_rdy,
 	output wire fbw_row_swap,
 
 	output wire [23:0] fbw_data,
-	output wire [ 5:0] fbw_col_addr,
+	output wire [LOG_N_COLS-1:0] fbw_col_addr,
 	output wire fbw_wren,
 
 	output wire frame_swap,
@@ -44,8 +51,8 @@ module pgen (
 
 	// Counters
 	reg [11:0] frame;
-	reg [5:0] cnt_row;
-	reg [5:0] cnt_col;
+	reg [LOG_N_ROWS-1:0] cnt_row;
+	reg [LOG_N_COLS-1:0] cnt_col;
 	reg cnt_row_last;
 	reg cnt_col_last;
 
@@ -104,7 +111,7 @@ module pgen (
 			cnt_row_last <= 1'b0;
 		end else if ((fsm_state == ST_WRITE_ROW) && fbw_row_rdy) begin
 			cnt_row <= cnt_row + 1;
-			cnt_row_last <= cnt_row == 6'b111110;
+			cnt_row_last <= cnt_row == ((1 << LOG_N_ROWS) - 2);
 		end
 
 	// Column counter
@@ -114,26 +121,38 @@ module pgen (
 			cnt_col_last <= 0;
 		end else begin
 			cnt_col <= cnt_col + 1;
-			cnt_col_last <= cnt_col == 6'b111110;
+			cnt_col_last <= cnt_col == (N_COLS - 2);
 		end
 
 
 	// Front-Buffer write
 	// ------------------
 
+	// Generate R/B channels by taking 8 bits off the row/col counters
+	// (and wrapping to the MSBs if those are shorter than 8 bits
+	genvar i;
+	generate
+		for (i=0; i<8; i=i+1)
+		begin
+			assign fbw_data[23-i] = cnt_col[LOG_N_COLS-1-(i%LOG_N_COLS)];
+			assign fbw_data[ 7-i] = cnt_row[LOG_N_ROWS-1-(i%LOG_N_ROWS)];
+		end
+	endgenerate
+
+	// Moving green lines
 	wire [3:0] c0 = frame[7:4];
 	wire [3:0] c1 = frame[7:4] + 1;
 
 	wire [3:0] a0 = 4'hf - frame[3:0];
 	wire [3:0] a1 = frame[3:0];
 
-	assign fbw_wren = fsm_state == ST_GEN_ROW;
-	assign fbw_col_addr = cnt_col;
-	assign fbw_data[23:16] = (cnt_col[5:2] * cnt_col[5:2]) + cnt_col[3:0];
 	assign fbw_data[15: 8] =
 		(((cnt_col[3:0] == c0) || (cnt_row[3:0] == c0)) ? {a0, a0} : 8'h00) +
 		(((cnt_col[3:0] == c1) || (cnt_row[3:0] == c1)) ? {a1, a1} : 8'h00);
-	assign fbw_data[ 7: 0] = (cnt_row[5:2] * cnt_row[5:2]) + cnt_row[3:0];
+
+	// Write enable and address
+	assign fbw_wren = fsm_state == ST_GEN_ROW;
+	assign fbw_col_addr = cnt_col;
 
 
 	// Back-Buffer store

@@ -112,7 +112,10 @@ module top (
 	);
 
 `ifdef PATTERN
-	pgen pgen_I (
+	pgen #(
+		.N_ROWS(N_BANKS * N_ROWS),
+		.N_COLS(N_COLS)
+	) pgen_I (
 		.fbw_row_addr({fbw_bank_addr, fbw_row_addr}),
 		.fbw_row_store(fbw_row_store),
 		.fbw_row_rdy(fbw_row_rdy),
