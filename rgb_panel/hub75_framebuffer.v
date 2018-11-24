@@ -83,7 +83,7 @@ module hub75_framebuffer #(
 	localparam integer LOG_BITDEPTH = (BITDEPTH > 4) ? $clog2(BITDEPTH) : 2;
 
 	// Number of SPRAM needed for frame buffer
-	localparam integer LOG_SPRAM_COUNT = `MAX(0, $clog2(1 << (1 + LOG_N_BANKS + LOG_N_ROWS + LOG_N_COLS + LOG_BITDEPTH)) - 18);
+	localparam integer LOG_SPRAM_COUNT = `MAX(0, (1 + LOG_N_BANKS + LOG_N_ROWS + LOG_N_COLS + LOG_BITDEPTH) - 18);
 	localparam integer SPRAM_COUNT = 1 << LOG_SPRAM_COUNT;
 
 	// Width of the framebuffer access bus
