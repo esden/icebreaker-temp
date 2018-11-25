@@ -102,9 +102,9 @@ module top (
 		.fbw_wren(fbw_wren),
 		.frame_swap(frame_swap),
 		.frame_rdy(frame_rdy),
-		.cfg_pre_latch_len(8'h06),
-		.cfg_latch_len(8'h06),
-		.cfg_post_latch_len(8'h06),
+		.cfg_pre_latch_len(8'h80),
+		.cfg_latch_len(8'h80),
+		.cfg_post_latch_len(8'h80),
 		.cfg_bcm_bit_len(8'h06),
 		.clk(clk),
 		.rst(rst)
