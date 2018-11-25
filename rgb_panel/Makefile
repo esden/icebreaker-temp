@@ -31,6 +31,8 @@ OBJS=\
 	glitch_filter.v \
 	pgen.v \
 	vgen.v \
+	vstream.v \
+	spi.v \
 	spi_flash_reader.v \
 	sysmgr.v \
 	sim_spram.v

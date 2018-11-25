@@ -10,6 +10,7 @@
 
 `default_nettype none
 
+//`define STREAM
 //`define PATTERN
 `define VIDEO
 
@@ -27,6 +28,14 @@ module top (
 	input  wire flash_miso,
 	output wire flash_cs_n,
 	output wire flash_clk,
+`endif
+
+	// SPI Slave interface
+`ifdef STREAM
+	input  wire slave_mosi,
+	output wire slave_miso,
+	input  wire slave_cs_n,
+	input  wire slave_clk,
 `endif
 
 	// PMOD2 buttons
@@ -109,6 +118,33 @@ module top (
 		.clk(clk),
 		.rst(rst)
 	);
+
+
+	// Host Streaming
+	// --------------
+`ifdef STREAM
+	vstream #(
+		.N_ROWS(N_BANKS * N_ROWS),
+		.N_COLS(N_COLS),
+		.BITDEPTH(BITDEPTH)
+	) stream_I (
+		.spi_mosi(slave_mosi),
+		.spi_miso(slave_miso),
+		.spi_cs_n(slave_cs_n),
+		.spi_clk(slave_clk),
+		.fbw_row_addr({fbw_bank_addr, fbw_row_addr}),
+		.fbw_row_store(fbw_row_store),
+		.fbw_row_rdy(fbw_row_rdy),
+		.fbw_row_swap(fbw_row_swap),
+		.fbw_data(fbw_data),
+		.fbw_col_addr(fbw_col_addr),
+		.fbw_wren(fbw_wren),
+		.frame_swap(frame_swap),
+		.frame_rdy(frame_rdy),
+		.clk(clk),
+		.rst(rst)
+	);
+`endif
 
 
 	// Pattern generator

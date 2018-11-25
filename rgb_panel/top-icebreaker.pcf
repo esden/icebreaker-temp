@@ -20,6 +20,12 @@ set_io -nowarn flash_miso 17
 set_io -nowarn flash_cs_n 16
 set_io -nowarn flash_clk 15
 
+# SPI Slave
+set_io -nowarn slave_mosi 14
+set_io -nowarn slave_miso 17
+set_io -nowarn slave_cs_n 11
+set_io -nowarn slave_clk 15
+
 # PMOD2 buttons
 set_io -nowarn pmod_btn[0] 20
 set_io -nowarn pmod_btn[1] 19
