@@ -241,14 +241,6 @@ module vgen #(
 	assign color[1] = { sr_data16[10: 5], sr_data16[10: 9] };
 	assign color[2] = { sr_data16[ 4: 0], sr_data16[ 4: 2] };
 
-
-	// Back-Buffer store
-	// -----------------
-
-	assign fbw_row_addr  = cnt_row;
-	assign fbw_row_store = (fsm_state == ST_ROW_WRITE) && fbw_row_rdy;
-	assign fbw_row_swap  = (fsm_state == ST_ROW_WRITE) && fbw_row_rdy;
-
 	generate
 		if (BITDEPTH == 8)
 			assign fbw_data = { color[0][7:5], color[1][7:5], color[2][7:6] };
@@ -257,6 +249,14 @@ module vgen #(
 		else if (BITDEPTH == 24)
 			assign fbw_data = { color[0], color[1], color[2] };
 	endgenerate
+
+
+	// Back-Buffer store
+	// -----------------
+
+	assign fbw_row_addr  = cnt_row;
+	assign fbw_row_store = (fsm_state == ST_ROW_WRITE) && fbw_row_rdy;
+	assign fbw_row_swap  = (fsm_state == ST_ROW_WRITE) && fbw_row_rdy;
 
 
 	// Next frame
