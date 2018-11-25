@@ -1,0 +1,6 @@
+*.swp
+*_tb
+*.asc
+*.bin
+*.blif
+*.json
