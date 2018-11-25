@@ -13,15 +13,14 @@
 
 module top (
 	// nano-PMOD
-	output wire clk_lp,
+	output wire clk_lp_p,
+	output wire clk_lp_n,
 	output wire clk_hs_p,
 	output wire clk_hs_n,
-	output wire dat_lp,
+	output wire dat_lp_p,
+	output wire dat_lp_n,
 	output wire dat_hs_p,
 	output wire dat_hs_n,
-
-	output wire lcd_reset_n,
-	output wire bl_pwm,
 
 	// SPI
 	input  wire spi_mosi,
@@ -59,6 +58,7 @@ module top (
 	wire spf_empty;
 
 	// MIPI
+	wire [7:0] cfg_dsi_lpx;
 	wire [7:0] cfg_dsi_hs_prep;
 	wire [7:0] cfg_dsi_hs_zero;
 	wire [7:0] cfg_dsi_hs_trail;
@@ -207,14 +207,31 @@ module top (
 		.rst(rst)
 	);
 
+	spi_reg #(
+		.ADDR(8'h13),
+		.BYTES(1)
+	) reg_dsi_lpx_I (
+		.addr(sb_addr),
+		.data(sb_data),
+		.first(sb_first),
+		.strobe(sb_stb),
+		.rst_val(8'h04),
+		.out_val(cfg_dsi_lpx),
+		.out_stb(),
+		.clk(clk),
+		.rst(rst)
+	);
+
 	// MIPI DSI cores
 	nano_dsi_clk dsi_clk_I (
-		.clk_lp(clk_lp),
+		.clk_lp_p(clk_lp_n),
+		.clk_lp_n(clk_lp_p),
 		.clk_hs_p(clk_hs_p),
 		.clk_hs_n(clk_hs_n),
 		.hs_req(hs_clk_req),
 		.hs_rdy(hs_clk_rdy),
 		.clk_sync(hs_clk_sync),
+		.cfg_lpx(cfg_dsi_lpx),
 		.cfg_hs_prep(cfg_dsi_hs_prep),
 		.cfg_hs_zero(cfg_dsi_hs_zero),
 		.cfg_hs_trail(cfg_dsi_hs_trail),
@@ -223,7 +240,8 @@ module top (
 	);
 
 	nano_dsi_data dsi_data_I (
-		.data_lp(dat_lp),
+		.data_lp_p(dat_lp_p),
+		.data_lp_n(dat_lp_n),
 		.data_hs_p(dat_hs_p),
 		.data_hs_n(dat_hs_n),
 		.hs_start(hs_start),
@@ -232,6 +250,7 @@ module top (
 		.hs_ack(hs_ack),
 		.hs_rdy(hs_rdy),
 		.clk_sync(hs_clk_sync),
+		.cfg_lpx(cfg_dsi_lpx),
 		.cfg_hs_prep(cfg_dsi_hs_prep),
 		.cfg_hs_zero(cfg_dsi_hs_zero),
 		.cfg_hs_trail(cfg_dsi_hs_trail),
@@ -268,11 +287,6 @@ module top (
 		.clk(clk),
 		.rst(rst)
 	);
-
-	assign bl_pwm = bl_pwm_i;
-
-	// Reset
-	assign lcd_reset_n = cfg_lcd_csr[15] ? 1'b0 : 1'bz;
 
 	// HS clock enable
 	assign hs_clk_req = cfg_lcd_csr[14];

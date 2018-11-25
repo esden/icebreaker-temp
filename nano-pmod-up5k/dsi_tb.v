@@ -17,10 +17,12 @@ module dsi_tb;
 	reg clk = 1'b0;
 
 	// PHY
-	output wire clk_lp;
+	output wire clk_lp_p;
+	output wire clk_lp_n;
 	output wire clk_hs_p;
 	output wire clk_hs_n;
-	output wire data_lp;
+	output wire data_lp_p;
+	output wire data_lp_n;
 	output wire data_hs_p;
 	output wire data_hs_n;
 
@@ -54,12 +56,14 @@ module dsi_tb;
 
 	// DUT
 	nano_dsi_clk dsi_clk_I (
-		.clk_lp(clk_lp),
+		.clk_lp_p(clk_lp_p),
+		.clk_lp_n(clk_lp_n),
 		.clk_hs_p(clk_hs_p),
 		.clk_hs_n(clk_hs_n),
 		.hs_req(hs_clk_req),
 		.hs_rdy(hs_clk_rdy),
 		.clk_sync(hs_clk_sync),
+		.cfg_lpx(8'h04),
 		.cfg_hs_prep(8'h10),
 		.cfg_hs_zero(8'h10),
 		.cfg_hs_trail(8'h10),
@@ -67,7 +71,8 @@ module dsi_tb;
 		.rst(rst)
 	);
 	nano_dsi_data dsi_data_I (
-		.data_lp(data_lp),
+		.data_lp_p(data_lp_p),
+		.data_lp_n(data_lp_n),
 		.data_hs_p(data_hs_p),
 		.data_hs_n(data_hs_n),
 		.hs_start(hs_start),
@@ -75,6 +80,7 @@ module dsi_tb;
 		.hs_last(hs_last),
 		.hs_ack(hs_ack),
 		.clk_sync(hs_clk_sync),
+		.cfg_lpx(8'h04),
 		.cfg_hs_prep(8'h10),
 		.cfg_hs_zero(8'h10),
 		.cfg_hs_trail(8'h10),

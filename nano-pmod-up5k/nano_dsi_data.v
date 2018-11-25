@@ -12,7 +12,8 @@
 
 module nano_dsi_data (
 	// nano-PMOD - DATA lane
-	output wire data_lp,
+	output wire data_lp_p,
+	output wire data_lp_n,
 	output wire data_hs_p,
 	output wire data_hs_n,
 
@@ -27,6 +28,7 @@ module nano_dsi_data (
 	input  wire clk_sync,
 
 	// Config
+	input  wire [7:0] cfg_lpx,
 	input  wire [7:0] cfg_hs_prep,
 	input  wire [7:0] cfg_hs_zero,
 	input  wire [7:0] cfg_hs_trail,
@@ -40,7 +42,8 @@ module nano_dsi_data (
 	// -------
 
 	// IO control
-	reg io_lp;
+	reg io_lp_p;
+	reg io_lp_n;
 
 	reg io_hs_active;
 	reg io_hs_bit;
@@ -48,11 +51,12 @@ module nano_dsi_data (
 	// FSM
 	localparam
 		ST_LP11				= 0,
-		ST_LP00				= 1,
-		ST_HS_ZERO			= 2,
-		ST_HS_SYNC			= 3,
-		ST_HS_DATA			= 4,
-		ST_HS_TRAIL			= 5;
+		ST_LP01				= 1,
+		ST_LP00				= 2,
+		ST_HS_ZERO			= 3,
+		ST_HS_SYNC			= 4,
+		ST_HS_DATA			= 5,
+		ST_HS_TRAIL			= 6;
 
 	reg  [2:0] fsm_state;
 	reg  [2:0] fsm_state_next;
@@ -78,13 +82,30 @@ module nano_dsi_data (
 		.PULLUP(1'b0),
 		.NEG_TRIGGER(1'b0),
 		.IO_STANDARD("SB_LVCMOS")
-	) iob_data_lp_I (
-		.PACKAGE_PIN(data_lp),
+	) iob_data_lp_p_I (
+		.PACKAGE_PIN(data_lp_p),
 		.CLOCK_ENABLE(1'b1),
 //		.INPUT_CLK(1'b0),
 		.OUTPUT_CLK(clk),
 		.OUTPUT_ENABLE(1'b1),
-		.D_OUT_0(io_lp),
+		.D_OUT_0(io_lp_p),
+		.D_OUT_1(1'b0),
+		.D_IN_0(),
+		.D_IN_1()
+	);
+
+	SB_IO #(
+		.PIN_TYPE(6'b100100),
+		.PULLUP(1'b0),
+		.NEG_TRIGGER(1'b0),
+		.IO_STANDARD("SB_LVCMOS")
+	) iob_data_lp_n_I (
+		.PACKAGE_PIN(data_lp_n),
+		.CLOCK_ENABLE(1'b1),
+//		.INPUT_CLK(1'b0),
+		.OUTPUT_CLK(clk),
+		.OUTPUT_ENABLE(1'b1),
+		.D_OUT_0(io_lp_n),
 		.D_OUT_1(1'b0),
 		.D_IN_0(),
 		.D_IN_1()
@@ -146,6 +167,10 @@ module nano_dsi_data (
 		case (fsm_state)
 			ST_LP11:
 				if (hs_start)
+					fsm_state_next = ST_LP01;
+
+			ST_LP01:
+				if (timer_trig)
 					fsm_state_next = ST_LP00;
 
 			ST_LP00:
@@ -182,6 +207,7 @@ module nano_dsi_data (
 
 			// Preload for next state
 			case (fsm_state_next)
+				ST_LP01:			timer_val <= cfg_lpx;
 				ST_LP00:			timer_val <= cfg_hs_prep;
 				ST_HS_ZERO:			timer_val <= cfg_hs_zero;
 				ST_HS_TRAIL:		timer_val <= cfg_hs_trail;
@@ -230,7 +256,8 @@ module nano_dsi_data (
 
 	always @(posedge clk)
 	begin
-		io_lp <= (fsm_state == ST_LP11);
+		io_lp_p <= (fsm_state == ST_LP11);
+		io_lp_n <= (fsm_state == ST_LP11) | (fsm_state == ST_LP01);
 
 		io_hs_active <=
 			(fsm_state == ST_HS_ZERO) ||
