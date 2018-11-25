@@ -21,11 +21,13 @@ module top (
 	output wire hub75_le,
 	output wire hub75_blank,
 
-	// SPI interface
-	output wire spi_mosi,
-	input  wire spi_miso,
-	output wire spi_cs_n,
-	output wire spi_clk,
+	// SPI Flash interface
+`ifdef VIDEO
+	output wire flash_mosi,
+	input  wire flash_miso,
+	output wire flash_cs_n,
+	output wire flash_clk,
+`endif
 
 	// PMOD2 buttons
 	input  wire [2:0] pmod_btn,
@@ -184,10 +186,10 @@ module top (
 
 	// SPI reader to fetch frames from flash
 	spi_flash_reader spi_reader_I (
-		.spi_mosi(spi_mosi),
-		.spi_miso(spi_miso),
-		.spi_cs_n(spi_cs_n),
-		.spi_clk(spi_clk),
+		.spi_mosi(flash_mosi),
+		.spi_miso(flash_miso),
+		.spi_cs_n(flash_cs_n),
+		.spi_clk(flash_clk),
 		.addr(sr_addr),
 		.len(sr_len),
 		.go(sr_go),

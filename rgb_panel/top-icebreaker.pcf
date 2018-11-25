@@ -14,11 +14,11 @@ set_io -nowarn hub75_clk 32	# B9
 set_io -nowarn hub75_le	36	# B8
 set_io -nowarn hub75_blank 42	# B7
 
-# SPI
-set_io spi_mosi 14
-set_io spi_miso 17
-set_io spi_cs_n 16
-set_io spi_clk 15
+# SPI Flash
+set_io -nowarn flash_mosi 14
+set_io -nowarn flash_miso 17
+set_io -nowarn flash_cs_n 16
+set_io -nowarn flash_clk 15
 
 # PMOD2 buttons
 set_io pmod_btn[0] 20
