@@ -42,15 +42,15 @@ TESTBENCHES=\
 DATA_GEN=\
 	gamma_table.hex
 
-all: $(DATA_GEN) $(PROJ).bin $(TESTBENCHES)
+all: $(PROJ).bin $(TESTBENCHES)
 
 gamma_table.hex: mkgamma.py
 	./mkgamma.py > $@
 
-%_tb: %_tb.v $(ICE40_LIBS) $(OBJS)
+%_tb: %_tb.v $(ICE40_LIBS) $(OBJS) $(DATA_GEN)
 	iverilog -Wall -DSIM=1 -o $@ $(ICE40_LIBS) $(OBJS) $<
 
-%.blif %.json: %.v $(OBJS)
+%.blif %.json: %.v $(OBJS) $(DATA_GEN)
 	yosys -p 'synth_ice40 -top $(PROJ) -blif $*.blif -json $*.json' $< $(OBJS)
 
 ifeq ($(PNR),next)
