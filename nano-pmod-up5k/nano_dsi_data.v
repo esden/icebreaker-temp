@@ -122,8 +122,8 @@ module nano_dsi_data (
 		.CLOCK_ENABLE(1'b1),
 //		.INPUT_CLK(1'b0),
 		.OUTPUT_CLK(clk),
-		.OUTPUT_ENABLE(io_hs_active),
-		.D_OUT_0(io_hs_bit),
+		.OUTPUT_ENABLE(1'b1),
+		.D_OUT_0(io_hs_bit & io_hs_active),
 		.D_OUT_1(1'b0),
 		.D_IN_0(),
 		.D_IN_1()
@@ -139,8 +139,8 @@ module nano_dsi_data (
 		.CLOCK_ENABLE(1'b1),
 //		.INPUT_CLK(1'b0),
 		.OUTPUT_CLK(clk),
-		.OUTPUT_ENABLE(io_hs_active),
-		.D_OUT_0(~io_hs_bit),
+		.OUTPUT_ENABLE(1'b1),
+		.D_OUT_0(~io_hs_bit & io_hs_active),
 		.D_OUT_1(1'b0),
 		.D_IN_0(),
 		.D_IN_1()
