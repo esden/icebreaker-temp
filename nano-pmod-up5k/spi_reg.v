@@ -47,7 +47,7 @@ module spi_reg #(
 			reg [WIDTH-9:0] history;
 			reg [BYTES-2:0] bc;
 
-			always @(posedge clk)
+			always @(posedge clk or posedge rst)
 				if (rst) begin
 					history <= 0;
 					bc <= 0;
@@ -68,7 +68,7 @@ module spi_reg #(
 	assign hit = hit_delay[BYTES-1] & strobe & (addr == ADDR);
 
 	// Value register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			cur_val <= rst_val;
 		else if (hit)

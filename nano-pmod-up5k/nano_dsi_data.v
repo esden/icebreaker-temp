@@ -130,7 +130,7 @@ module nano_dsi_data (
 	// ---
 
 	// State register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fsm_state <= ST_LP11;
 		else

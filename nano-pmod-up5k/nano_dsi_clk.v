@@ -122,7 +122,7 @@ module nano_dsi_clk (
 	// ---
 
 	// State register
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			fsm_state <= ST_LP11;
 		else
@@ -185,7 +185,7 @@ module nano_dsi_clk (
 	// Clock sync
 	// ----------
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			clk_sync_i <= 1'b0;
 		else

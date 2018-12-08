@@ -151,7 +151,7 @@ module top (
 	assign hs_last    = spf_rd_last;
 	assign spf_rd_ena = hs_ack;
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			reading <= 1'b0;
 		else

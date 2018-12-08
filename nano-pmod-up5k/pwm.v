@@ -29,13 +29,13 @@ module pwm #(
 
 	assign cnt_cycle_rst = { { (WIDTH-1){1'b0} }, 2'b10 };
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			cnt_cycle <= cnt_cycle_rst;
 		else
 			cnt_cycle <= cnt_cycle[WIDTH] ? cnt_cycle_rst : (cnt_cycle + 1);
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			cnt_on <= 0;
 		else

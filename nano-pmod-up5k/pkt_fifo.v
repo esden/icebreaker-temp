@@ -59,14 +59,14 @@ module pkt_fifo #(
 	);
 
 	// Write pointer
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			ram_waddr <= 0;
 		else if (wr_ena)
 			ram_waddr <= ram_waddr + 1;
 
 	// Read pointer
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			ram_raddr <= 0;
 		else if (rd_ce)
@@ -76,7 +76,7 @@ module pkt_fifo #(
 	assign ln_mod = { rd_ce & ~wr_ena, rd_ce ^ wr_ena };
 	assign ln_mod_ext = { {(AWIDTH){ln_mod[1]}}, ln_mod[0] };
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			len_nxt <= 0;
 		else
@@ -101,7 +101,7 @@ module pkt_fifo #(
 
 	assign valid_nxt = ~len_cur[AWIDTH];
 
-	always @(posedge clk)
+	always @(posedge clk or posedge rst)
 		if (rst)
 			valid_out <= 1'b0;
 		else if (rd_ena | ~valid_out)
