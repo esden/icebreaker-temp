@@ -24,7 +24,8 @@ class PanelControl(object):
 		self.slave.exchange([reg, v])
 
 	def read_status(self):
-		return self.slave.exchange([0x00], duplex=True)[0]
+		rv = self.slave.exchange([0x00, 0x00], duplex=True)
+		return rv[0] | rv[1]
 
 	def send_data(self, data):
 		self.slave.exchange([0x80] + data)
