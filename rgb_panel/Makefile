@@ -13,6 +13,7 @@ ICETIME = icetime
 ICEPROG = iceprog
 
 PNR ?= next
+SPI ?= simple
 
 ICE40_LIBS=$(shell yosys-config --datdir/ice40/cells_sim.v)
 
@@ -33,6 +34,8 @@ OBJS=\
 	vgen.v \
 	vstream.v \
 	spi_simple.v \
+	spi_fast.v \
+	spi_fast_core.v \
 	spi_flash_reader.v \
 	sysmgr.v \
 	sim_spram.v
@@ -44,6 +47,12 @@ TESTBENCHES=\
 DATA_GEN=\
 	gamma_table.hex
 
+ifeq ($(SPI),fast)
+VERILOG_DEFINES=-DSPI_FAST=1
+else
+VERILOG_DEFINES=
+endif
+
 all: $(PROJ).bin $(TESTBENCHES)
 
 gamma_table.hex: mkgamma.py
@@ -53,7 +62,7 @@ gamma_table.hex: mkgamma.py
 	iverilog -Wall -DSIM=1 -o $@ $(ICE40_LIBS) $(OBJS) $<
 
 %.blif %.json: %.v $(OBJS) $(DATA_GEN)
-	yosys -p 'synth_ice40 -top $(PROJ) -blif $*.blif -json $*.json' $< $(OBJS)
+	yosys -p 'read_verilog $(VERILOG_DEFINES) $< $(OBJS); synth_ice40 -top $(PROJ) -blif $*.blif -json $*.json'
 
 ifeq ($(PNR),next)
 %.asc: $(PIN_DEF) %.json

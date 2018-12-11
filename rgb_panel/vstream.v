@@ -65,7 +65,11 @@ module vstream #(
 	// SPI interface
 	// -------------
 
+`ifdef SPI_FAST
+	spi_fast spi_I (
+`else
 	spi_simple spi_I (
+`endif
 		.spi_mosi(spi_mosi),
 		.spi_miso(spi_miso),
 		.spi_cs_n(spi_cs_n),
