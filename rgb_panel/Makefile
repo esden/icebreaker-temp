@@ -12,7 +12,7 @@ ICEPACK = icepack
 ICETIME = icetime
 ICEPROG = iceprog
 
-PNR ?= arachne
+PNR ?= next
 
 ICE40_LIBS=$(shell yosys-config --datdir/ice40/cells_sim.v)
 
