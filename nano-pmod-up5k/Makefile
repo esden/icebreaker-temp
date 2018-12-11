@@ -49,11 +49,11 @@ all: $(PROJ).bin $(TESTBENCHES)
 	iverilog -Wall -DSIM=1 -o $@ $(ICE40_LIBS) $(OBJS) $<
 
 %.blif %.json: %.v $(OBJS)
-	yosys -p 'read_verilog $(VERILOG_DEFINES) $< $(OBJS); synth_ice40 -top $(PROJ) -blif $*.blif -json $*.json'
+	yosys -p 'read_verilog $(VERILOG_DEFINES) $< $(OBJS); synth_ice40 -dffe_min_ce_use 4 -relut -top $(PROJ) -blif $*.blif -json $*.json'
 
 ifeq ($(PNR),next)
 %.asc: $(PIN_DEF) %.json
-	$(NEXTPNR) $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $*.json --pcf $(PIN_DEF) --asc $@ --freq 60
+	$(NEXTPNR) $(NEXTPNR_ARGS) --$(DEVICE) --package $(PACKAGE) --json $*.json --pcf $(PIN_DEF) --asc $@ --freq 50 --opt-timing
 else
 %.asc: $(PIN_DEF) %.blif
 	$(ARACHNE) $(ARACHNE_ARGS) -d $(subst up,,$(subst hx,,$(subst lp,,$(DEVICE)))) -o $@ -p $^ -P $(PACKAGE)
