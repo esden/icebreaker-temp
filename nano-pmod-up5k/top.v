@@ -93,7 +93,7 @@ module top (
 	// Slave SPI interface
 	// -------------------
 
-	spi spi_I (
+	spi_simple spi_I (
 		.spi_mosi(spi_mosi),
 		.spi_miso(spi_miso),
 		.spi_cs_n(spi_cs_n),

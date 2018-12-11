@@ -23,7 +23,7 @@ OBJS=\
 	pkt_spi_write.v \
 	pwm.v \
 	ram_sdp.v \
-	spi.v \
+	spi_simple.v \
 	spi_reg.v \
 	sysmgr.v
 

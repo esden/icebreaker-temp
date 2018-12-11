@@ -1,5 +1,5 @@
 /*
- * spi.v
+ * spi_simple.v
  *
  * CERN Open Hardware Licence v1.2 - See LICENSE
  *
@@ -10,7 +10,7 @@
 
 `default_nettype none
 
-module spi (
+module spi_simple (
 	// SPI pads
 	input  wire spi_mosi,
 	output wire spi_miso,
@@ -57,7 +57,7 @@ module spi (
 	// ---
 
 	// IOs
-	spi_io_in cs_n_io_I (
+	spi_simple_io_in cs_n_io_I (
 		.pad(spi_cs_n),
 		.val(spi_cs_n_i),
 		.rise(spi_cs_n_r),
@@ -66,7 +66,7 @@ module spi (
 		.rst(rst)
 	);
 
-	spi_io_in clk_io_I (
+	spi_simple_io_in clk_io_I (
 		.pad(spi_clk),
 		.val(),
 		.rise(spi_clk_r),
@@ -75,7 +75,7 @@ module spi (
 		.rst(rst)
 	);
 
-	spi_io_in mosi_io_I (
+	spi_simple_io_in mosi_io_I (
 		.pad(spi_mosi),
 		.val(spi_mosi_i),
 		.rise(),
@@ -84,7 +84,7 @@ module spi (
 		.rst(rst)
 	);
 
-	spi_io_out miso_io_I (
+	spi_simple_io_out miso_io_I (
 		.pad(spi_miso),
 		.val(spi_miso_out),
 		.oe(spi_miso_oe),
@@ -163,7 +163,7 @@ module spi (
 endmodule // spi
 
 
-module spi_io_in (
+module spi_simple_io_in (
 	input  wire pad,
 	output wire val,
 	output reg  rise,
@@ -207,10 +207,10 @@ module spi_io_in (
 
 	assign val = val_i;
 
-endmodule // spi_io_in
+endmodule // spi_simple_io_in
 
 
-module spi_io_out (
+module spi_simple_io_out (
 	output wire pad,
 	input  wire val,
 	input  wire oe,
@@ -235,4 +235,4 @@ module spi_io_out (
 		.D_IN_1()
 	);
 
-endmodule // spi_io_out
+endmodule // spi_simple_io_out
