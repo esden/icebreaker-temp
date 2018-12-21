@@ -15,7 +15,7 @@ class PanelControl(object):
 		# SPI link
 		self.spi = SpiController(cs_count=3)
 		self.spi.configure('ftdi://ftdi:2232h/1')
-		self.slave = self.spi.get_port(cs=2, freq=self.spi_frequency, mode=0)
+		self.slave = self.spi.get_port(cs=0, freq=self.spi_frequency, mode=0)
 
 	def reg_w16(self, reg, v):
 		self.slave.exchange([reg, v >> 8, v & 0xff])
@@ -50,30 +50,34 @@ class PanelControl(object):
 			pass
 
 
-panel = PanelControl(spi_frequency=5e6)
+panel = PanelControl(spi_frequency=3e7)
 
+frame_h = 64
+frame_w = (64 * 6)
+frame_pix_bytes = 2
+frame_size = frame_h * frame_w * frame_pix_bytes
 
 # Example loading a single frame
 def nyan_load(filename='nyan_glitch_64x64x16.raw'):
 	img = open(filename,'rb').read()
-	return img[0:8192]
+	return img[0:frame_size]
 
 data = nyan_load()
-panel.send_frame(data)
+panel.send_frame(data, width=frame_w)
 
 
 # Example of streaming video
-fps = 25
+fps = 30
 tpf = 1.0 / fps
 tt = time.time() + tpf
 
 fh = open('video.raw', 'rb')
 while True:
 	# Read and send one frame
-	d = fh.read(8192)
-	if len(d) < 8192:
+	d = fh.read(frame_size)
+	if len(d) < frame_size:
 		break
-	panel.send_frame(d)
+	panel.send_frame(d, width=frame_w)
 
 	# Delay to match the FPS
 	w = tt - time.time()
