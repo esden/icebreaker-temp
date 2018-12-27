@@ -4,4 +4,7 @@
 *.bin
 *.blif
 *.json
+*.d
+*.o
 gamma_table.hex
+icestream

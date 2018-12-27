@@ -53,7 +53,7 @@ else
 VERILOG_DEFINES=
 endif
 
-all: $(PROJ).bin $(TESTBENCHES)
+all: $(PROJ).bin $(TESTBENCHES) icestream
 
 gamma_table.hex: mkgamma.py
 	./mkgamma.py > $@
@@ -78,6 +78,14 @@ endif
 %.rpt: %.asc
 	$(ICETIME) -d $(DEVICE) -mtr $@ $<
 
+CFLAGS += -MD -O2 -Wall -std=c99
+
+LDLIBS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --libs $$pkg && exit; done; echo -lftdi; )
+CFLAGS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --cflags $$pkg && exit; done; )
+
+icestream: icestream.o mpsse.o
+	$(CC) -o $@ $(LDFLAGS) $^ $(LDLIBS)
+
 prog: $(PROJ).bin
 	$(ICEPROG) $<
 
@@ -91,7 +99,7 @@ data-prog: $(PROJ).bin nyan_glitch_64x64x16.raw.xz
 	$(ICEPROG) $(PROJ)-data.bin
 
 clean:
-	rm -f $(PROJ).blif $(PROJ).json $(PROJ).asc $(PROJ).rpt $(PROJ).bin $(TESTBENCHES) *.vcd $(DATA_GEN)
+	rm -f $(PROJ).blif $(PROJ).json $(PROJ).asc $(PROJ).rpt $(PROJ).bin $(TESTBENCHES) *.vcd $(DATA_GEN) icestream *.o *.d
 
 .SECONDARY:
 .PHONY: all prog clean
